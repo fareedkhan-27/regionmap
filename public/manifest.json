@@ -1,0 +1,41 @@
+{
+  "name": "Region Map Generator",
+  "short_name": "RegionMap",
+  "description": "Create beautiful world maps with highlighted regions",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#FEFDFB",
+  "theme_color": "#2A9D8F",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "business"],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Region Map Generator Desktop View"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Region Map Generator Mobile View"
+    }
+  ]
+}
