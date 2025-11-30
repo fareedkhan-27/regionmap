@@ -424,12 +424,6 @@ export default function MapApp() {
                       Not found: {validationErrors.join(", ")}
                     </p>
                   )}
-                  <button
-                    onClick={handleValidateInput}
-                    className="w-full mt-3 py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
-                  >
-                    Generate Map
-                  </button>
                 </div>
               </>
             )}
@@ -529,17 +523,6 @@ export default function MapApp() {
                     ))}
                   </div>
                 </div>
-
-                {/* Generate button for multi-group */}
-                <button
-                  onClick={() => {
-                    applyAllGroupInputs();
-                    setShowMobilePanel(false);
-                  }}
-                  className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
-                >
-                  Apply Changes
-                </button>
               </>
             )}
           </div>
@@ -1209,7 +1192,7 @@ export default function MapApp() {
             )}
             
             {/* Panel */}
-            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[70vh] flex flex-col">
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
               {/* Handle */}
               <div className="flex justify-center py-2">
                 <div className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full" />
@@ -1238,9 +1221,31 @@ export default function MapApp() {
               </div>
               
               {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-4 pb-6">
+              <div className="flex-1 overflow-y-auto p-4">
                 {renderMobileContent()}
               </div>
+              
+              {/* Sticky Action Button - Always visible */}
+              {mobileTab !== "export" && (
+                <div className="sticky bottom-0 p-4 pt-2 bg-gradient-to-t from-cream-50 dark:from-ink-900 via-cream-50 dark:via-ink-900">
+                  <button
+                    onClick={() => {
+                      if (config.mode === "multi") {
+                        applyAllGroupInputs();
+                      } else {
+                        handleValidateInput();
+                      }
+                      setShowMobilePanel(false);
+                    }}
+                    className="w-full py-3.5 text-sm font-semibold bg-accent-teal text-white rounded-xl hover:bg-accent-teal/90 transition-colors shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Generate Map
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

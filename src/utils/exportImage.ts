@@ -36,7 +36,7 @@ export async function exportMapAsImage(
 ): Promise<void> {
   const { width: exportWidth, height: exportHeight } = RESOLUTION_DIMENSIONS[options.resolution];
   
-  // Get the current SVG dimensions
+  // Get the current SVG dimensions from attributes or computed style
   const svgWidth = svgElement.width.baseVal.value || svgElement.clientWidth || 960;
   const svgHeight = svgElement.height.baseVal.value || svgElement.clientHeight || 540;
   
@@ -47,31 +47,45 @@ export async function exportMapAsImage(
   const gElement = svgClone.querySelector('g');
   const currentTransform = gElement?.getAttribute('transform') || '';
   
-  // Calculate scale to fit the map properly in export dimensions
-  // We want the map to fill the canvas nicely with some padding
-  const padding = Math.min(exportWidth, exportHeight) * 0.05; // 5% padding
+  // Calculate padding and title space
+  const padding = Math.min(exportWidth, exportHeight) * 0.03; // 3% padding
+  const titleSpace = options.title && options.titlePosition !== "hidden" ? exportHeight * 0.1 : 0;
+  
+  // Available space for the map
   const availableWidth = exportWidth - (padding * 2);
-  const availableHeight = exportHeight - (padding * 2);
+  const availableHeight = exportHeight - (padding * 2) - titleSpace;
   
-  // If there's title, reserve space at top
-  const titleSpace = options.title && options.titlePosition !== "hidden" ? exportHeight * 0.12 : 0;
-  const mapAreaHeight = availableHeight - titleSpace;
+  // Calculate the natural aspect ratio of a world map (roughly 2:1)
+  // Use this to create a consistent export regardless of screen size
+  const mapAspectRatio = 2; // Width / Height for world map
   
-  // Calculate the scale factor to fit SVG into export area
-  const scaleX = availableWidth / svgWidth;
-  const scaleY = mapAreaHeight / svgHeight;
+  // Determine the best fit dimensions
+  let mapWidth: number, mapHeight: number;
+  if (availableWidth / availableHeight > mapAspectRatio) {
+    // Height constrained
+    mapHeight = availableHeight;
+    mapWidth = mapHeight * mapAspectRatio;
+  } else {
+    // Width constrained
+    mapWidth = availableWidth;
+    mapHeight = mapWidth / mapAspectRatio;
+  }
+  
+  // Calculate scale to fit the SVG into our target map area
+  const scaleX = mapWidth / svgWidth;
+  const scaleY = mapHeight / svgHeight;
   const scale = Math.min(scaleX, scaleY);
   
   // Calculate position to center the map
   const scaledWidth = svgWidth * scale;
   const scaledHeight = svgHeight * scale;
   const offsetX = padding + (availableWidth - scaledWidth) / 2;
-  const offsetY = padding + titleSpace + (mapAreaHeight - scaledHeight) / 2;
+  const offsetY = padding + titleSpace + (availableHeight - scaledHeight) / 2;
   
   // Update SVG attributes for export
   svgClone.setAttribute("width", String(exportWidth));
   svgClone.setAttribute("height", String(exportHeight));
-  svgClone.removeAttribute("viewBox"); // Remove viewBox to use explicit dimensions
+  svgClone.setAttribute("viewBox", `0 0 ${exportWidth} ${exportHeight}`);
   
   // Apply new transform that combines zoom state with export scaling
   if (gElement) {
@@ -91,7 +105,7 @@ export async function exportMapAsImage(
       existingScale = parseFloat(scaleMatch[1]) || 1;
     }
     
-    // Combine transforms: first move to export position, then apply existing zoom
+    // Combine transforms: position + existing zoom scaled
     const combinedTransform = `translate(${offsetX + existingTranslateX * scale}, ${offsetY + existingTranslateY * scale}) scale(${scale * existingScale})`;
     gElement.setAttribute('transform', combinedTransform);
   }
