@@ -92,7 +92,7 @@ export function calculateZoomTransform(
 // Country ID mappings for different TopoJSON sources
 // The world-atlas package uses numeric IDs based on ISO 3166-1 numeric codes
 export const ISO_NUMERIC_TO_ISO2: Record<string, string> = {
-  "004": "AF", "008": "AL", "012": "DZ", "020": "AD", "024": "AO",
+  "004": "AF", "008": "AL", "010": "AQ", "012": "DZ", "020": "AD", "024": "AO",
   "028": "AG", "032": "AR", "051": "AM", "036": "AU", "040": "AT",
   "031": "AZ", "044": "BS", "048": "BH", "050": "BD", "052": "BB",
   "112": "BY", "056": "BE", "084": "BZ", "204": "BJ", "064": "BT",

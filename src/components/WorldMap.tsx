@@ -34,6 +34,7 @@ interface WorldMapProps {
   height?: number;
   className?: string;
   isDarkMode?: boolean;
+  showLabels?: boolean;
 }
 
 export interface WorldMapHandle {
@@ -52,6 +53,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       height = 500,
       className = "",
       isDarkMode = false,
+      showLabels = false,
     },
     ref
   ) => {
@@ -299,6 +301,41 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                   {iso2 ? ` (${iso2})` : ""}
                 </title>
               </path>
+            );
+          })}
+
+          {/* Country Labels - only for selected countries */}
+          {showLabels && geoData.features.map((feature: Feature<Geometry>) => {
+            const iso2 = getISO2FromFeatureId(feature.id as string | number);
+            const isSelected = iso2 ? selectedCountries.includes(iso2) : false;
+            
+            if (!isSelected) return null;
+            
+            const countryName = (feature.properties as CountryProperties)?.name ?? "";
+            const centroid = pathGenerator.centroid(feature);
+            
+            if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null;
+            
+            return (
+              <text
+                key={`label-${feature.id}`}
+                x={centroid[0]}
+                y={centroid[1]}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={isDarkMode ? "#FEFDFB" : "#1A1A19"}
+                fontSize={Math.max(8, Math.min(12, width / 120))}
+                fontWeight="600"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                style={{
+                  textShadow: isDarkMode 
+                    ? "0 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.5)"
+                    : "0 1px 2px rgba(255,255,255,0.9), 0 0 4px rgba(255,255,255,0.7)",
+                  pointerEvents: "none",
+                }}
+              >
+                {countryName.length > 12 ? iso2 : countryName}
+              </text>
             );
           })}
         </g>

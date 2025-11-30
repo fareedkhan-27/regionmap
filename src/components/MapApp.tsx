@@ -23,6 +23,7 @@ export default function MapApp() {
     setActiveGroup,
     activeGroupId,
     applyPreset,
+    clearGroup,
     clearAllCountries,
     setTitleConfig,
     setBackground,
@@ -38,6 +39,7 @@ export default function MapApp() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobilePanel, setShowMobilePanel] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("select");
+  const [showCountryLabels, setShowCountryLabels] = useState(false);
   const [mapDimensions, setMapDimensions] = useState({ width: 960, height: 540 });
   
   // Input states - separate state for each group's raw input
@@ -218,19 +220,24 @@ export default function MapApp() {
   const handleZoomToSelection = () => mapRef.current?.zoomToSelection();
   const handleResetZoom = () => mapRef.current?.resetZoom();
 
-  // Preset selection
+  // Preset selection - applies to active group only
   const handlePresetSelect = (presetId: string) => {
+    // Get the target group - active group or first group
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+
     applyPreset(presetId);
+    
     // Update the group input to reflect the preset
-    if (config.groups.length > 0) {
-      const targetGroupId = activeGroupId || config.groups[0].id;
-      const preset = REGION_PRESETS.find(p => p.id === presetId);
-      if (preset) {
-        const countriesStr = preset.countries.join(", ");
-        setGroupInputs(prev => ({
-          ...prev,
-          [targetGroupId]: countriesStr
-        }));
+    const preset = REGION_PRESETS.find(p => p.id === presetId);
+    if (preset) {
+      const countriesStr = preset.countries.join(", ");
+      setGroupInputs(prev => ({
+        ...prev,
+        [targetGroupId]: countriesStr
+      }));
+      // For single mode, also update countryInput
+      if (config.mode === "single") {
         setCountryInput(countriesStr);
         setCountryInputTouched(true);
       }
@@ -240,7 +247,20 @@ export default function MapApp() {
     }
   };
 
-  // Clear all countries handler
+  // Clear active group only (for multi-group mode)
+  const handleClearActiveGroup = useCallback(() => {
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+    
+    clearGroup(targetGroupId);
+    setGroupInputs(prev => ({
+      ...prev,
+      [targetGroupId]: ""
+    }));
+    setValidationErrors([]);
+  }, [activeGroupId, config.groups, clearGroup]);
+
+  // Clear all countries handler (clears everything)
   const handleClearAll = useCallback(() => {
     // Clear the config
     clearAllCountries();
@@ -295,7 +315,11 @@ export default function MapApp() {
             {/* Quick Presets */}
             <div>
               <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
-                Quick Presets
+                Quick Presets {config.mode === "multi" && activeGroupId && (
+                  <span className="text-accent-teal normal-case font-normal">
+                    → applies to selected group
+                  </span>
+                )}
               </label>
               <div className="flex flex-wrap gap-2">
                 {REGION_PRESETS.slice(0, 8).map((preset) => (
@@ -307,12 +331,29 @@ export default function MapApp() {
                     {preset.name}
                   </button>
                 ))}
-                <button
-                  onClick={handleClearAll}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
-                >
-                  Clear
-                </button>
+                {config.mode === "multi" ? (
+                  <>
+                    <button
+                      onClick={handleClearActiveGroup}
+                      className="px-3 py-1.5 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-colors"
+                    >
+                      Clear Group
+                    </button>
+                    <button
+                      onClick={handleClearAll}
+                      className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleClearAll}
+                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 
@@ -523,6 +564,26 @@ export default function MapApp() {
                 ))}
               </div>
             </div>
+
+            {/* Country Labels Toggle */}
+            <div>
+              <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
+                Country Labels
+              </label>
+              <button
+                onClick={() => setShowCountryLabels(!showCountryLabels)}
+                className={`w-full py-3 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  showCountryLabels
+                    ? "bg-accent-teal text-white"
+                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                {showCountryLabels ? "Labels On" : "Show Labels"}
+              </button>
+            </div>
           </div>
         );
 
@@ -666,6 +727,17 @@ export default function MapApp() {
                 >
                   Reset
                 </button>
+                <button
+                  onClick={() => setShowCountryLabels(!showCountryLabels)}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    showCountryLabels
+                      ? "bg-accent-teal text-white"
+                      : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                  }`}
+                  title="Toggle country name labels"
+                >
+                  Labels
+                </button>
               </>
             )}
             
@@ -726,7 +798,11 @@ export default function MapApp() {
               {/* Presets */}
               <div>
                 <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
-                  Region Presets
+                  Region Presets {config.mode === "multi" && (
+                    <span className="text-accent-teal normal-case font-normal text-[10px]">
+                      → selected group
+                    </span>
+                  )}
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {REGION_PRESETS.slice(0, 10).map((preset) => (
@@ -739,12 +815,31 @@ export default function MapApp() {
                       {preset.name}
                     </button>
                   ))}
-                  <button
-                    onClick={handleClearAll}
-                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
-                  >
-                    Clear
-                  </button>
+                  {config.mode === "multi" ? (
+                    <>
+                      <button
+                        onClick={handleClearActiveGroup}
+                        className="px-2.5 py-1 text-xs font-medium rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-colors"
+                        title="Clear selected group only"
+                      >
+                        Clear Group
+                      </button>
+                      <button
+                        onClick={handleClearAll}
+                        className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                        title="Clear all groups"
+                      >
+                        Clear All
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleClearAll}
+                      className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1020,6 +1115,7 @@ export default function MapApp() {
               width={mapDimensions.width}
               height={mapDimensions.height}
               isDarkMode={isDarkMode}
+              showLabels={showCountryLabels}
               className="rounded-lg shadow-lg"
             />
 

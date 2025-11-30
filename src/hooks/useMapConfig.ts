@@ -39,6 +39,7 @@ export interface UseMapConfigReturn {
   activeGroupId: string | null;
   // Presets
   applyPreset: (presetId: string) => void;
+  clearGroup: (groupId: string) => void;
   clearAllCountries: () => void;
   // Title & Appearance
   setTitleConfig: (config: Partial<TitleConfig>) => void;
@@ -192,14 +193,25 @@ export function useMapConfig(): UseMapConfigReturn {
           ],
         }));
       } else {
-        // Apply to active group
-        if (activeGroupId) {
-          setGroupCountries(activeGroupId, preset.countries);
+        // Apply to active group, or first group if none active
+        const targetGroupId = activeGroupId || config.groups[0]?.id;
+        if (targetGroupId) {
+          setGroupCountries(targetGroupId, preset.countries);
         }
       }
     },
-    [config.mode, activeGroupId, setGroupCountries]
+    [config.mode, activeGroupId, config.groups, setGroupCountries]
   );
+
+  // Clear a single group's countries
+  const clearGroup = useCallback((groupId: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      groups: prev.groups.map((g) => 
+        g.id === groupId ? { ...g, countries: [] } : g
+      ),
+    }));
+  }, []);
 
   const clearAllCountries = useCallback(() => {
     setConfig((prev) => ({
@@ -272,6 +284,7 @@ export function useMapConfig(): UseMapConfigReturn {
     setActiveGroup,
     activeGroupId,
     applyPreset,
+    clearGroup,
     clearAllCountries,
     setTitleConfig,
     setBackground,
