@@ -318,10 +318,15 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             
             if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null;
             
-            // Use smaller font when showing all countries
+            // Use smaller font when showing all countries (reference mode)
             const fontSize = hasAnySelection 
               ? Math.max(8, Math.min(12, width / 120))
-              : Math.max(5, Math.min(8, width / 150));
+              : Math.max(4, Math.min(6, width / 180));
+            
+            // For small countries or when showing all, use ISO code
+            const displayName = hasAnySelection
+              ? (countryName.length > 10 ? (iso2 || countryName.slice(0, 3)) : countryName)
+              : (iso2 || countryName.slice(0, 2));
             
             return (
               <text
@@ -332,16 +337,17 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                 dominantBaseline="central"
                 fill={isDarkMode ? "#FEFDFB" : "#1A1A19"}
                 fontSize={fontSize}
-                fontWeight={hasAnySelection ? "600" : "500"}
+                fontWeight={hasAnySelection ? "600" : "400"}
                 fontFamily="system-ui, -apple-system, sans-serif"
                 style={{
                   textShadow: isDarkMode 
                     ? "0 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.5)"
-                    : "0 1px 2px rgba(255,255,255,0.9), 0 0 4px rgba(255,255,255,0.7)",
+                    : "0 1px 1px rgba(255,255,255,0.9), 0 0 3px rgba(255,255,255,0.7)",
                   pointerEvents: "none",
+                  opacity: hasAnySelection ? 1 : 0.8,
                 }}
               >
-                {countryName.length > 10 ? (iso2 || countryName.slice(0, 3)) : countryName}
+                {displayName}
               </text>
             );
           })}

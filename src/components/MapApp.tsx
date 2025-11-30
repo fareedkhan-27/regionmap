@@ -473,14 +473,21 @@ export default function MapApp() {
                             type="color"
                             value={group.color}
                             onChange={(e) => updateGroup(group.id, { color: e.target.value })}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveGroup(group.id);
+                            }}
                             className="w-8 h-8 rounded cursor-pointer border border-cream-300 dark:border-ink-600 flex-shrink-0"
                           />
                           <input
                             type="text"
                             value={group.name}
                             onChange={(e) => updateGroup(group.id, { name: e.target.value })}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveGroup(group.id);
+                            }}
+                            onFocus={() => setActiveGroup(group.id)}
                             placeholder={`Group ${index + 1}`}
                             className="flex-1 px-2 py-1 text-sm font-medium bg-transparent border-b border-cream-300 dark:border-ink-600 focus:border-accent-teal focus:outline-none text-ink-800 dark:text-ink-100"
                           />
@@ -507,7 +514,11 @@ export default function MapApp() {
                             handleGroupInputChange(group.id, e.target.value);
                           }}
                           onBlur={() => applyGroupInput(group.id)}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveGroup(group.id);
+                          }}
+                          onFocus={() => setActiveGroup(group.id)}
                           placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
@@ -954,14 +965,21 @@ export default function MapApp() {
                             type="color"
                             value={group.color}
                             onChange={(e) => updateGroup(group.id, { color: e.target.value })}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveGroup(group.id);
+                            }}
                             className="w-8 h-8 rounded cursor-pointer border border-cream-300 dark:border-ink-600 flex-shrink-0"
                           />
                           <input
                             type="text"
                             value={group.name}
                             onChange={(e) => updateGroup(group.id, { name: e.target.value })}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveGroup(group.id);
+                            }}
+                            onFocus={() => setActiveGroup(group.id)}
                             placeholder={`Group ${index + 1}`}
                             className="flex-1 px-2 py-1 text-sm font-medium bg-transparent border-b border-cream-300 dark:border-ink-600 focus:border-accent-teal focus:outline-none text-ink-800 dark:text-ink-100"
                           />
@@ -989,7 +1007,11 @@ export default function MapApp() {
                             handleGroupInputChange(group.id, e.target.value);
                           }}
                           onBlur={() => applyGroupInput(group.id)}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveGroup(group.id);
+                          }}
+                          onFocus={() => setActiveGroup(group.id)}
                           placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
