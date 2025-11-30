@@ -16,15 +16,15 @@ export default function MapApp() {
   const {
     config,
     setMode,
-    addGroup,
-    removeGroup,
+    addGroup: addGroupToConfig,
+    removeGroup: removeGroupFromConfig,
     updateGroup,
     setGroupCountriesFromInput,
-    setActiveGroup,
-    activeGroupId,
+    setActiveGroup: setActiveGroupInConfig,
+    activeGroupId: activeGroupIdFromConfig,
     applyPreset,
     applyPresetToGroup,
-    clearGroup,
+    clearGroup: clearGroupInConfig,
     clearAllCountries,
     setTitleConfig,
     setBackground,
@@ -35,6 +35,16 @@ export default function MapApp() {
     hasSelection,
   } = useMapConfig();
 
+  // LOCAL state for active group - don't rely on hook
+  const [localActiveGroupId, setLocalActiveGroupId] = useState<string>("group-1");
+  
+  // Use local state, but sync with config when needed
+  const activeGroupId = localActiveGroupId;
+  const setActiveGroup = useCallback((id: string) => {
+    setLocalActiveGroupId(id);
+    setActiveGroupInConfig(id);
+  }, [setActiveGroupInConfig]);
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -43,32 +53,12 @@ export default function MapApp() {
   const [showCountryLabels, setShowCountryLabels] = useState(false);
   const [mapDimensions, setMapDimensions] = useState({ width: 960, height: 540 });
   
-  // Input states - separate state for each group's raw input text
-  // This is the SOURCE OF TRUTH for what's shown in the textareas
+  // Input states - LOCAL state, completely managed here
   const [countryInput, setCountryInput] = useState("");
   const [countryInputTouched, setCountryInputTouched] = useState(false);
-  const [groupInputs, setGroupInputs] = useState<Record<string, string>>({});
+  const [groupInputs, setGroupInputs] = useState<Record<string, string>>({ "group-1": "" });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
-
-  // Initialize groupInputs for the first group on mount
-  const isInitialized = useRef(false);
-  useEffect(() => {
-    if (!isInitialized.current && config.groups.length > 0) {
-      isInitialized.current = true;
-      const initialInputs: Record<string, string> = {};
-      config.groups.forEach(group => {
-        initialInputs[group.id] = group.countries.join(", ");
-      });
-      setGroupInputs(initialInputs);
-    }
-  }, [config.groups]);
-
-  // NO further syncing - we manage groupInputs manually
-  // When a group is added, we add empty entry in handleAddGroup
-  // When a preset is applied, we update that group's entry
-  // When user types, we update that group's entry
-  // The config.groups[].countries is ONLY updated on blur/apply
 
   // Check for mobile viewport
   useEffect(() => {
@@ -162,10 +152,12 @@ export default function MapApp() {
 
   // Handle adding a new group - make it active automatically
   const handleAddGroup = useCallback(() => {
-    const newGroupId = addGroup();
+    const newGroupId = addGroupToConfig();
+    // Set local active state to new group
+    setLocalActiveGroupId(newGroupId);
     // Initialize the new group's input to empty
     setGroupInputs(prev => ({ ...prev, [newGroupId]: "" }));
-  }, [addGroup]);
+  }, [addGroupToConfig]);
 
   // Handle removing a group
   const handleRemoveGroup = useCallback((groupId: string) => {
@@ -176,7 +168,7 @@ export default function MapApp() {
     
     // Find another group to set as active before removing
     const remainingGroups = config.groups.filter(g => g.id !== groupId);
-    const newActiveId = remainingGroups[0]?.id || null;
+    const newActiveId = remainingGroups[0]?.id || "group-1";
     
     // Clean up the input state for this group
     setGroupInputs(prev => {
@@ -185,14 +177,13 @@ export default function MapApp() {
       return newInputs;
     });
     
-    // If this was the active group, set a new active group first
-    if (activeGroupId === groupId && newActiveId) {
-      setActiveGroup(newActiveId);
-    }
+    // Set new active group (locally and in config)
+    setLocalActiveGroupId(newActiveId);
+    setActiveGroupInConfig(newActiveId);
     
-    // Now remove the group
-    removeGroup(groupId);
-  }, [removeGroup, activeGroupId, config.groups, setActiveGroup]);
+    // Now remove the group from config
+    removeGroupFromConfig(groupId);
+  }, [removeGroupFromConfig, config.groups, setActiveGroupInConfig]);
 
   // Handle country input validation for single mode
   const handleValidateInput = useCallback(() => {
@@ -255,9 +246,10 @@ export default function MapApp() {
   const handleResetZoom = () => mapRef.current?.resetZoom();
 
   // Preset selection - applies to active group only
-  const handlePresetSelect = (presetId: string) => {
+  const handlePresetSelect = useCallback((presetId: string) => {
     // Get the target group - active group or first group
     const targetGroupId = activeGroupId || config.groups[0]?.id;
+    
     if (!targetGroupId) return;
 
     // Update the group input to reflect the preset
@@ -273,10 +265,13 @@ export default function MapApp() {
       }
       
       // Update the input display
-      setGroupInputs(prev => ({
-        ...prev,
-        [targetGroupId]: countriesStr
-      }));
+      setGroupInputs(prev => {
+        
+        return {
+          ...prev,
+          [targetGroupId]: countriesStr
+        };
+      });
       
       // For single mode, also update countryInput
       if (config.mode === "single") {
@@ -287,20 +282,20 @@ export default function MapApp() {
     if (isMobile) {
       setShowMobilePanel(false);
     }
-  };
+  }, [activeGroupId, config.groups, config.mode, applyPreset, applyPresetToGroup, isMobile]);
 
   // Clear active group only (for multi-group mode)
   const handleClearActiveGroup = useCallback(() => {
     const targetGroupId = activeGroupId || config.groups[0]?.id;
     if (!targetGroupId) return;
     
-    clearGroup(targetGroupId);
+    clearGroupInConfig(targetGroupId);
     setGroupInputs(prev => ({
       ...prev,
       [targetGroupId]: ""
     }));
     setValidationErrors([]);
-  }, [activeGroupId, config.groups, clearGroup]);
+  }, [activeGroupId, config.groups, clearGroupInConfig]);
 
   // Clear all countries handler (clears everything)
   const handleClearAll = useCallback(() => {

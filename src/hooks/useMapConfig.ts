@@ -15,7 +15,8 @@ import { getPresetById } from "@/data/regionPresets";
 import { parseCountryInput, validateCountryCodes } from "@/utils/parseCountryInput";
 
 // Generate unique IDs for groups
-let groupIdCounter = 0;
+// Start at 1 because "group-1" is the default initial group
+let groupIdCounter = 1;
 function generateGroupId(): string {
   groupIdCounter += 1;
   return `group-${groupIdCounter}`;
