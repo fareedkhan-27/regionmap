@@ -39,6 +39,7 @@ export interface UseMapConfigReturn {
   activeGroupId: string | null;
   // Presets
   applyPreset: (presetId: string) => void;
+  applyPresetToGroup: (presetId: string, groupId: string) => void;
   clearGroup: (groupId: string) => void;
   clearAllCountries: () => void;
   // Title & Appearance
@@ -174,7 +175,18 @@ export function useMapConfig(): UseMapConfigReturn {
     setActiveGroupIdState(groupId);
   }, []);
 
-  // Presets
+  // Presets - apply to specific group
+  const applyPresetToGroup = useCallback(
+    (presetId: string, targetGroupId: string) => {
+      const preset = getPresetById(presetId);
+      if (!preset) return;
+
+      setGroupCountries(targetGroupId, preset.countries);
+    },
+    [setGroupCountries]
+  );
+
+  // Legacy applyPreset for backwards compatibility
   const applyPreset = useCallback(
     (presetId: string) => {
       const preset = getPresetById(presetId);
@@ -283,6 +295,7 @@ export function useMapConfig(): UseMapConfigReturn {
     setActiveGroup,
     activeGroupId,
     applyPreset,
+    applyPresetToGroup,
     clearGroup,
     clearAllCountries,
     setTitleConfig,

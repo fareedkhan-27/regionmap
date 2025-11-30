@@ -23,6 +23,7 @@ export default function MapApp() {
     setActiveGroup,
     activeGroupId,
     applyPreset,
+    applyPresetToGroup,
     clearGroup,
     clearAllCountries,
     setTitleConfig,
@@ -49,34 +50,30 @@ export default function MapApp() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
 
-  // Initialize group inputs when groups are added (but NOT on every render)
-  // This effect only adds new groups to groupInputs, never overwrites existing
-  const groupIds = config.groups.map(g => g.id).join(',');
+  // Initialize group inputs ONLY when new groups are added
+  // Use a ref to track which groups have been initialized
+  const initializedGroupsRef = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
-    setGroupInputs(prev => {
-      const newInputs = { ...prev };
-      let changed = false;
-      
-      config.groups.forEach(group => {
-        // Only initialize if this group ID doesn't exist in our inputs yet
-        if (!(group.id in newInputs)) {
-          newInputs[group.id] = group.countries.join(", ");
-          changed = true;
-        }
-      });
-      
-      // Clean up inputs for groups that no longer exist
-      Object.keys(newInputs).forEach(id => {
-        if (!config.groups.find(g => g.id === id)) {
-          delete newInputs[id];
-          changed = true;
-        }
-      });
-      
-      return changed ? newInputs : prev;
+    config.groups.forEach(group => {
+      if (!initializedGroupsRef.current.has(group.id)) {
+        // New group - initialize its input
+        initializedGroupsRef.current.add(group.id);
+        setGroupInputs(prev => ({
+          ...prev,
+          [group.id]: group.countries.join(", ")
+        }));
+      }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupIds]); // Only run when group IDs change (add/remove), not when content changes
+    
+    // Clean up removed groups from ref
+    const currentIds = new Set(config.groups.map(g => g.id));
+    initializedGroupsRef.current.forEach(id => {
+      if (!currentIds.has(id)) {
+        initializedGroupsRef.current.delete(id);
+      }
+    });
+  }, [config.groups]);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -124,20 +121,23 @@ export default function MapApp() {
     setGroupInputs(prev => ({ ...prev, [groupId]: value }));
   }, []);
 
-  // Apply group input (parse and validate on blur or button click)
-  // Uses functional update to avoid stale closure issues
+  // Keep a ref to the latest groupInputs for use in callbacks
+  const groupInputsRef = useRef(groupInputs);
+  useEffect(() => {
+    groupInputsRef.current = groupInputs;
+  }, [groupInputs]);
+
+  // Apply group input (parse and validate on blur)
   const applyGroupInput = useCallback((groupId: string) => {
-    let result = { valid: [] as string[], invalid: [] as string[] };
+    // Get the current input value from ref (always latest)
+    const input = groupInputsRef.current[groupId] || "";
+    const result = setGroupCountriesFromInput(groupId, input);
     
-    setGroupInputs(prev => {
-      const input = prev[groupId] || "";
-      result = setGroupCountriesFromInput(groupId, input);
-      // Update the input to show the validated countries
-      return { 
-        ...prev, 
-        [groupId]: result.valid.join(", ")
-      };
-    });
+    // Update the input to show the validated countries
+    setGroupInputs(prev => ({ 
+      ...prev, 
+      [groupId]: result.valid.join(", ")
+    }));
     
     return result;
   }, [setGroupCountriesFromInput]);
@@ -189,6 +189,9 @@ export default function MapApp() {
       delete newInputs[groupId];
       return newInputs;
     });
+    
+    // Clean up the initialized ref
+    initializedGroupsRef.current.delete(groupId);
     
     // If this was the active group, set a new active group first
     if (activeGroupId === groupId && newActiveId) {
@@ -265,16 +268,24 @@ export default function MapApp() {
     const targetGroupId = activeGroupId || config.groups[0]?.id;
     if (!targetGroupId) return;
 
-    applyPreset(presetId);
-    
     // Update the group input to reflect the preset
     const preset = REGION_PRESETS.find(p => p.id === presetId);
     if (preset) {
       const countriesStr = preset.countries.join(", ");
+      
+      // Update the config (countries in group)
+      if (config.mode === "single") {
+        applyPreset(presetId);
+      } else {
+        applyPresetToGroup(presetId, targetGroupId);
+      }
+      
+      // Update the input display
       setGroupInputs(prev => ({
         ...prev,
         [targetGroupId]: countriesStr
       }));
+      
       // For single mode, also update countryInput
       if (config.mode === "single") {
         setCountryInput(countriesStr);
