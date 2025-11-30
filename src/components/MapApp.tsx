@@ -1170,6 +1170,37 @@ export default function MapApp() {
                 className={`absolute ${isMobile ? "bottom-2 left-2 text-xs" : "bottom-4 left-4"}`}
               />
             )}
+
+            {/* Mobile Floating Controls - Top Right */}
+            {isMobile && (
+              <div className="absolute top-2 right-2 flex flex-col gap-2">
+                {/* Zoom Reset */}
+                <button
+                  onClick={() => mapRef.current?.resetZoom()}
+                  className="p-2.5 bg-white dark:bg-ink-800 rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300 hover:bg-cream-100 active:bg-cream-200"
+                  title="Reset Zoom"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                </button>
+                
+                {/* Labels Toggle */}
+                <button
+                  onClick={() => setShowCountryLabels(!showCountryLabels)}
+                  className={`p-2.5 rounded-lg shadow-lg border transition-colors ${
+                    showCountryLabels
+                      ? "bg-accent-teal text-white border-accent-teal"
+                      : "bg-white dark:bg-ink-800 border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300"
+                  }`}
+                  title={showCountryLabels ? "Hide Labels" : "Show Labels"}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -1177,11 +1208,12 @@ export default function MapApp() {
       {/* Mobile: Bottom Navigation */}
       {isMobile && (
         <>
-          {/* Bottom Sheet */}
+          {/* Bottom Sheet - positioned above the nav bar */}
           <div
-            className={`fixed inset-x-0 bottom-0 z-30 transform transition-transform duration-300 ease-out ${
+            className={`fixed inset-x-0 z-30 transform transition-transform duration-300 ease-out ${
               showMobilePanel ? "translate-y-0" : "translate-y-full"
             }`}
+            style={{ bottom: '64px' }} /* Height of bottom nav */
           >
             {/* Backdrop */}
             {showMobilePanel && (
@@ -1192,7 +1224,7 @@ export default function MapApp() {
             )}
             
             {/* Panel */}
-            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[60vh] flex flex-col">
               {/* Handle */}
               <div className="flex justify-center py-2 flex-shrink-0">
                 <div className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full" />
@@ -1221,13 +1253,13 @@ export default function MapApp() {
               </div>
               
               {/* Tab Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 pb-2">
+              <div className="flex-1 overflow-y-auto p-4 pb-2 min-h-0">
                 {renderMobileContent()}
               </div>
               
               {/* Fixed Action Button at Bottom - Always visible in Select and Style tabs */}
               {mobileTab !== "export" && (
-                <div className="flex-shrink-0 p-4 pt-2 border-t border-cream-200 dark:border-ink-700 bg-cream-50 dark:bg-ink-900">
+                <div className="flex-shrink-0 px-4 py-3 border-t border-cream-200 dark:border-ink-700 bg-cream-50 dark:bg-ink-900">
                   <button
                     onClick={() => {
                       if (config.mode === "multi") {
@@ -1237,7 +1269,7 @@ export default function MapApp() {
                       }
                       setShowMobilePanel(false);
                     }}
-                    className="w-full py-3.5 text-sm font-semibold bg-accent-teal text-white rounded-xl hover:bg-accent-teal/90 transition-colors shadow-lg flex items-center justify-center gap-2"
+                    className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-xl hover:bg-accent-teal/90 transition-colors shadow-lg flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
