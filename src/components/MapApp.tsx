@@ -1194,12 +1194,12 @@ export default function MapApp() {
             {/* Panel */}
             <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
               {/* Handle */}
-              <div className="flex justify-center py-2">
+              <div className="flex justify-center py-2 flex-shrink-0">
                 <div className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full" />
               </div>
               
               {/* Tab Header */}
-              <div className="flex border-b border-cream-200 dark:border-ink-700 px-4">
+              <div className="flex border-b border-cream-200 dark:border-ink-700 px-4 flex-shrink-0">
                 {([
                   { id: "select", label: "Select", icon: "🌍" },
                   { id: "style", label: "Style", icon: "🎨" },
@@ -1220,14 +1220,14 @@ export default function MapApp() {
                 ))}
               </div>
               
-              {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-4">
+              {/* Tab Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 pb-2">
                 {renderMobileContent()}
               </div>
               
-              {/* Sticky Action Button - Always visible */}
+              {/* Fixed Action Button at Bottom - Always visible in Select and Style tabs */}
               {mobileTab !== "export" && (
-                <div className="sticky bottom-0 p-4 pt-2 bg-gradient-to-t from-cream-50 dark:from-ink-900 via-cream-50 dark:via-ink-900">
+                <div className="flex-shrink-0 p-4 pt-2 border-t border-cream-200 dark:border-ink-700 bg-cream-50 dark:bg-ink-900">
                   <button
                     onClick={() => {
                       if (config.mode === "multi") {
