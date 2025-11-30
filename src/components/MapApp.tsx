@@ -43,37 +43,32 @@ export default function MapApp() {
   const [showCountryLabels, setShowCountryLabels] = useState(false);
   const [mapDimensions, setMapDimensions] = useState({ width: 960, height: 540 });
   
-  // Input states - separate state for each group's raw input
+  // Input states - separate state for each group's raw input text
+  // This is the SOURCE OF TRUTH for what's shown in the textareas
   const [countryInput, setCountryInput] = useState("");
   const [countryInputTouched, setCountryInputTouched] = useState(false);
   const [groupInputs, setGroupInputs] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
 
-  // Initialize group inputs ONLY when new groups are added
-  // Use a ref to track which groups have been initialized
-  const initializedGroupsRef = useRef<Set<string>>(new Set());
-  
+  // Initialize groupInputs for the first group on mount
+  const isInitialized = useRef(false);
   useEffect(() => {
-    config.groups.forEach(group => {
-      if (!initializedGroupsRef.current.has(group.id)) {
-        // New group - initialize its input
-        initializedGroupsRef.current.add(group.id);
-        setGroupInputs(prev => ({
-          ...prev,
-          [group.id]: group.countries.join(", ")
-        }));
-      }
-    });
-    
-    // Clean up removed groups from ref
-    const currentIds = new Set(config.groups.map(g => g.id));
-    initializedGroupsRef.current.forEach(id => {
-      if (!currentIds.has(id)) {
-        initializedGroupsRef.current.delete(id);
-      }
-    });
+    if (!isInitialized.current && config.groups.length > 0) {
+      isInitialized.current = true;
+      const initialInputs: Record<string, string> = {};
+      config.groups.forEach(group => {
+        initialInputs[group.id] = group.countries.join(", ");
+      });
+      setGroupInputs(initialInputs);
+    }
   }, [config.groups]);
+
+  // NO further syncing - we manage groupInputs manually
+  // When a group is added, we add empty entry in handleAddGroup
+  // When a preset is applied, we update that group's entry
+  // When user types, we update that group's entry
+  // The config.groups[].countries is ONLY updated on blur/apply
 
   // Check for mobile viewport
   useEffect(() => {
@@ -189,9 +184,6 @@ export default function MapApp() {
       delete newInputs[groupId];
       return newInputs;
     });
-    
-    // Clean up the initialized ref
-    initializedGroupsRef.current.delete(groupId);
     
     // If this was the active group, set a new active group first
     if (activeGroupId === groupId && newActiveId) {
@@ -519,7 +511,7 @@ export default function MapApp() {
 
                         {/* Country Input for this group */}
                         <textarea
-                          value={groupInputs[group.id] !== undefined ? groupInputs[group.id] : group.countries.join(", ")}
+                          value={groupInputs[group.id] ?? ""}
                           onChange={(e) => {
                             e.stopPropagation();
                             handleGroupInputChange(group.id, e.target.value);
@@ -1012,7 +1004,7 @@ export default function MapApp() {
 
                         {/* Country Input for this group */}
                         <textarea
-                          value={groupInputs[group.id] !== undefined ? groupInputs[group.id] : group.countries.join(", ")}
+                          value={groupInputs[group.id] ?? ""}
                           onChange={(e) => {
                             e.stopPropagation();
                             handleGroupInputChange(group.id, e.target.value);
