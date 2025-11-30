@@ -49,19 +49,34 @@ export default function MapApp() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
 
-  // Initialize group inputs when groups change
+  // Initialize group inputs when groups are added (but NOT on every render)
+  // This effect only adds new groups to groupInputs, never overwrites existing
+  const groupIds = config.groups.map(g => g.id).join(',');
   useEffect(() => {
     setGroupInputs(prev => {
-      const newInputs: Record<string, string> = {};
+      const newInputs = { ...prev };
+      let changed = false;
+      
       config.groups.forEach(group => {
-        // Keep existing input if present, otherwise use countries from config
-        newInputs[group.id] = prev[group.id] !== undefined 
-          ? prev[group.id] 
-          : group.countries.join(", ");
+        // Only initialize if this group ID doesn't exist in our inputs yet
+        if (!(group.id in newInputs)) {
+          newInputs[group.id] = group.countries.join(", ");
+          changed = true;
+        }
       });
-      return newInputs;
+      
+      // Clean up inputs for groups that no longer exist
+      Object.keys(newInputs).forEach(id => {
+        if (!config.groups.find(g => g.id === id)) {
+          delete newInputs[id];
+          changed = true;
+        }
+      });
+      
+      return changed ? newInputs : prev;
     });
-  }, [config.groups.length]); // Only run when number of groups changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIds]); // Only run when group IDs change (add/remove), not when content changes
 
   // Check for mobile viewport
   useEffect(() => {
@@ -110,54 +125,78 @@ export default function MapApp() {
   }, []);
 
   // Apply group input (parse and validate on blur or button click)
+  // Uses functional update to avoid stale closure issues
   const applyGroupInput = useCallback((groupId: string) => {
-    const input = groupInputs[groupId] || "";
-    const result = setGroupCountriesFromInput(groupId, input);
-    // Update the input to show the validated countries
-    setGroupInputs(prev => ({ 
-      ...prev, 
-      [groupId]: result.valid.join(", ")
-    }));
+    let result = { valid: [] as string[], invalid: [] as string[] };
+    
+    setGroupInputs(prev => {
+      const input = prev[groupId] || "";
+      result = setGroupCountriesFromInput(groupId, input);
+      // Update the input to show the validated countries
+      return { 
+        ...prev, 
+        [groupId]: result.valid.join(", ")
+      };
+    });
+    
     return result;
-  }, [groupInputs, setGroupCountriesFromInput]);
+  }, [setGroupCountriesFromInput]);
 
-  // Apply all group inputs
+  // Apply all group inputs at once
   const applyAllGroupInputs = useCallback(() => {
     let allErrors: string[] = [];
+    const newInputs: Record<string, string> = {};
+    
+    // Process all groups
     config.groups.forEach(group => {
-      const result = applyGroupInput(group.id);
+      const input = groupInputs[group.id] || "";
+      const result = setGroupCountriesFromInput(group.id, input);
+      newInputs[group.id] = result.valid.join(", ");
       allErrors = [...allErrors, ...result.invalid];
     });
+    
+    // Batch update all inputs at once
+    setGroupInputs(prev => ({ ...prev, ...newInputs }));
+    
     if (allErrors.length > 0) {
       setValidationErrors([...new Set(allErrors)]);
     } else {
       setValidationErrors([]);
     }
-  }, [config.groups, applyGroupInput]);
+  }, [config.groups, groupInputs, setGroupCountriesFromInput]);
 
-  // Handle adding a new group
+  // Handle adding a new group - make it active automatically
   const handleAddGroup = useCallback(() => {
-    addGroup();
-    // The new group will be added and we'll set its input in the useEffect
+    const newGroupId = addGroup();
+    // Initialize the new group's input to empty
+    setGroupInputs(prev => ({ ...prev, [newGroupId]: "" }));
   }, [addGroup]);
 
   // Handle removing a group
   const handleRemoveGroup = useCallback((groupId: string) => {
+    // Don't allow removing the last group
+    if (config.groups.length <= 1) {
+      return;
+    }
+    
+    // Find another group to set as active before removing
+    const remainingGroups = config.groups.filter(g => g.id !== groupId);
+    const newActiveId = remainingGroups[0]?.id || null;
+    
     // Clean up the input state for this group
     setGroupInputs(prev => {
       const newInputs = { ...prev };
       delete newInputs[groupId];
       return newInputs;
     });
-    // Remove the group
-    removeGroup(groupId);
-    // If this was the active group, set the first remaining group as active
-    if (activeGroupId === groupId && config.groups.length > 1) {
-      const remainingGroup = config.groups.find(g => g.id !== groupId);
-      if (remainingGroup) {
-        setActiveGroup(remainingGroup.id);
-      }
+    
+    // If this was the active group, set a new active group first
+    if (activeGroupId === groupId && newActiveId) {
+      setActiveGroup(newActiveId);
     }
+    
+    // Now remove the group
+    removeGroup(groupId);
   }, [removeGroup, activeGroupId, config.groups, setActiveGroup]);
 
   // Handle country input validation for single mode

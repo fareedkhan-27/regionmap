@@ -304,17 +304,24 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             );
           })}
 
-          {/* Country Labels - only for selected countries */}
+          {/* Country Labels - show for selected countries, or all if nothing selected */}
           {showLabels && geoData.features.map((feature: Feature<Geometry>) => {
             const iso2 = getISO2FromFeatureId(feature.id as string | number);
             const isSelected = iso2 ? selectedCountries.includes(iso2) : false;
+            const hasAnySelection = selectedCountries.length > 0;
             
-            if (!isSelected) return null;
+            // Show label if: country is selected, OR nothing is selected (show all)
+            if (hasAnySelection && !isSelected) return null;
             
             const countryName = (feature.properties as CountryProperties)?.name ?? "";
             const centroid = pathGenerator.centroid(feature);
             
             if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null;
+            
+            // Use smaller font when showing all countries
+            const fontSize = hasAnySelection 
+              ? Math.max(8, Math.min(12, width / 120))
+              : Math.max(5, Math.min(8, width / 150));
             
             return (
               <text
@@ -324,8 +331,8 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill={isDarkMode ? "#FEFDFB" : "#1A1A19"}
-                fontSize={Math.max(8, Math.min(12, width / 120))}
-                fontWeight="600"
+                fontSize={fontSize}
+                fontWeight={hasAnySelection ? "600" : "500"}
                 fontFamily="system-ui, -apple-system, sans-serif"
                 style={{
                   textShadow: isDarkMode 
@@ -334,7 +341,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                   pointerEvents: "none",
                 }}
               >
-                {countryName.length > 12 ? iso2 : countryName}
+                {countryName.length > 10 ? (iso2 || countryName.slice(0, 3)) : countryName}
               </text>
             );
           })}

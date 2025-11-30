@@ -26,7 +26,7 @@ export interface UseMapConfigReturn {
   // Mode
   setMode: (mode: Mode) => void;
   // Groups
-  addGroup: () => void;
+  addGroup: () => string;
   removeGroup: (groupId: string) => void;
   updateGroup: (groupId: string, updates: Partial<Group>) => void;
   setGroupCountries: (groupId: string, countries: CountryCode[]) => void;
@@ -103,10 +103,11 @@ export function useMapConfig(): UseMapConfigReturn {
 
   // Groups
   const addGroup = useCallback(() => {
+    const newId = generateGroupId();
     setConfig((prev) => {
       const newIndex = prev.groups.length;
       const newGroup: Group = {
-        id: generateGroupId(),
+        id: newId,
         name: `Group ${newIndex + 1}`,
         color: DEFAULT_GROUP_COLORS[newIndex % DEFAULT_GROUP_COLORS.length],
         countries: [],
@@ -116,6 +117,9 @@ export function useMapConfig(): UseMapConfigReturn {
         groups: [...prev.groups, newGroup],
       };
     });
+    // Set the new group as active
+    setActiveGroupIdState(newId);
+    return newId;
   }, []);
 
   const removeGroup = useCallback((groupId: string) => {
@@ -125,18 +129,13 @@ export function useMapConfig(): UseMapConfigReturn {
       if (filtered.length === 0) {
         return prev;
       }
-      
-      // Also update active group if we're removing the active one
-      // We need to do this inside the same state update for consistency
       return { ...prev, groups: filtered };
     });
     
-    // Update active group ID - use functional update to avoid stale closure
+    // Update active group ID if we're removing the active one
     setActiveGroupIdState((prevActiveId) => {
       if (prevActiveId === groupId) {
-        // Find another group to set as active
-        // We need to access the current groups, so we'll set to null and let the UI pick
-        return null;
+        return null; // Will be set by the caller
       }
       return prevActiveId;
     });
