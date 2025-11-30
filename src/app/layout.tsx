@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     "business presentation map",
     "infographic map",
   ],
-  authors: [{ name: "Fareed Khan", url: "https://linkedin.com/in/fareedkhankk" }],
+  authors: [{ name: "Fareed Khan", url: "https://linkedin.com/in/faraborz" }],
   creator: "Fareed Khan",
   publisher: "Fareed Khan",
   openGraph: {
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: "Region Map Generator | Create Beautiful World Maps in Seconds",
     description: "Free online tool to create custom world maps. Highlight countries, apply region presets, and export HD images.",
     images: ["/og-image.png"],
-    creator: "@fareedkhankk",
+    creator: "@faraborz",
   },
   robots: {
     index: true,
@@ -113,7 +113,7 @@ export default function RootLayout({
               author: {
                 "@type": "Person",
                 name: "Fareed Khan",
-                url: "https://linkedin.com/in/fareedkhankk",
+                url: "https://linkedin.com/in/faraborz",
               },
             }),
           }}

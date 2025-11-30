@@ -357,7 +357,7 @@ export default function LandingPage() {
               </div>
               <span className="text-sm text-ink-600">
                 Region Map Generator • Built by{" "}
-                <a href="https://linkedin.com/in/fareedkhankk" target="_blank" rel="noopener noreferrer" className="text-accent-teal hover:underline">
+                <a href="https://linkedin.com/in/faraborz" target="_blank" rel="noopener noreferrer" className="text-accent-teal hover:underline">
                   Fareed Khan
                 </a>
               </span>

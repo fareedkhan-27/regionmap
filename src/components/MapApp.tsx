@@ -213,58 +213,135 @@ export default function MapApp() {
               </div>
             </div>
 
-            {/* Country Input */}
-            <div>
-              <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
-                Enter Countries
-              </label>
-              <div className="flex gap-2">
-                {config.groups.length > 0 && (
-                  <div
-                    className="w-10 h-10 rounded-lg flex-shrink-0"
-                    style={{ backgroundColor: config.groups[0].color }}
-                  />
-                )}
-                <div className="flex-1">
-                  <textarea
-                    value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
-                    onChange={(e) => setCountryInput(e.target.value)}
-                    placeholder="India, UAE, Brazil, FR..."
-                    className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
-                  />
+            {/* Single Mode: Simple Input */}
+            {config.mode === "single" && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
+                    Enter Countries
+                  </label>
+                  <div className="flex gap-2">
+                    {config.groups.length > 0 && (
+                      <input
+                        type="color"
+                        value={config.groups[0].color}
+                        onChange={(e) => updateGroup(config.groups[0].id, { color: e.target.value })}
+                        className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <textarea
+                        value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
+                        onChange={(e) => setCountryInput(e.target.value)}
+                        placeholder="India, UAE, Brazil, FR..."
+                        className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
+                      />
+                    </div>
+                  </div>
+                  {validationErrors.length > 0 && (
+                    <p className="mt-1 text-xs text-accent-coral">
+                      Not found: {validationErrors.join(", ")}
+                    </p>
+                  )}
+                  <button
+                    onClick={handleValidateInput}
+                    className="w-full mt-3 py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
+                  >
+                    Generate Map
+                  </button>
                 </div>
-              </div>
-              {validationErrors.length > 0 && (
-                <p className="mt-1 text-xs text-accent-coral">
-                  Not found: {validationErrors.join(", ")}
-                </p>
-              )}
-              <button
-                onClick={handleValidateInput}
-                className="w-full mt-3 py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
-              >
-                Generate Map
-              </button>
-            </div>
+              </>
+            )}
 
-            {/* Color Picker for Single Mode */}
-            {config.mode === "single" && config.groups.length > 0 && (
-              <div>
-                <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
-                  Highlight Color
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={config.groups[0].color}
-                    onChange={(e) => updateGroup(config.groups[0].id, { color: e.target.value })}
-                    className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600"
-                  />
-                  <span className="text-sm text-ink-600 dark:text-ink-400 font-mono">
-                    {config.groups[0].color}
-                  </span>
+            {/* Multi-Group Mode: Group Management */}
+            {config.mode === "multi" && (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider">
+                      Groups ({config.groups.length})
+                    </label>
+                    <button
+                      onClick={addGroup}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-accent-teal text-white hover:bg-accent-teal/90 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Group
+                    </button>
+                  </div>
+
+                  {/* Group List */}
+                  <div className="space-y-3">
+                    {config.groups.map((group, index) => (
+                      <div
+                        key={group.id}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          activeGroupId === group.id
+                            ? "border-accent-teal bg-accent-teal/5"
+                            : "border-cream-200 dark:border-ink-700 bg-cream-50 dark:bg-ink-800"
+                        }`}
+                        onClick={() => setActiveGroup(group.id)}
+                      >
+                        {/* Group Header */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <input
+                            type="color"
+                            value={group.color}
+                            onChange={(e) => updateGroup(group.id, { color: e.target.value })}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-8 h-8 rounded cursor-pointer border border-cream-300 dark:border-ink-600 flex-shrink-0"
+                          />
+                          <input
+                            type="text"
+                            value={group.name}
+                            onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder={`Group ${index + 1}`}
+                            className="flex-1 px-2 py-1 text-sm font-medium bg-transparent border-b border-cream-300 dark:border-ink-600 focus:border-accent-teal focus:outline-none text-ink-800 dark:text-ink-100"
+                          />
+                          {config.groups.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeGroup(group.id);
+                              }}
+                              className="p-1.5 text-ink-400 hover:text-accent-coral hover:bg-accent-coral/10 rounded transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Country Input for this group */}
+                        <textarea
+                          value={group.countries.join(", ")}
+                          onChange={(e) => setGroupCountriesFromInput(group.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Enter countries..."
+                          className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                        />
+                        
+                        {/* Country count */}
+                        <div className="mt-1.5 text-xs text-ink-500 dark:text-ink-400">
+                          {group.countries.length} countries
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Generate button for multi-group */}
+                <button
+                  onClick={() => setShowMobilePanel(false)}
+                  className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
+                >
+                  Apply Changes
+                </button>
+              </>
             )}
           </div>
         );
@@ -561,39 +638,123 @@ export default function MapApp() {
                 </div>
               </div>
 
-              {/* Country Input */}
-              <div>
-                <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
-                  Enter Countries
-                </label>
-                <div className="flex gap-2 items-start">
-                  {config.groups.length > 0 && (
-                    <input
-                      type="color"
-                      value={config.groups[0].color}
-                      onChange={(e) => updateGroup(config.groups[0].id, { color: e.target.value })}
-                      className="w-10 h-10 rounded cursor-pointer flex-shrink-0"
+              {/* Single Mode: Simple Country Input */}
+              {config.mode === "single" && (
+                <div>
+                  <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
+                    Enter Countries
+                  </label>
+                  <div className="flex gap-2 items-start">
+                    {config.groups.length > 0 && (
+                      <input
+                        type="color"
+                        value={config.groups[0].color}
+                        onChange={(e) => updateGroup(config.groups[0].id, { color: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer flex-shrink-0"
+                      />
+                    )}
+                    <textarea
+                      value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
+                      onChange={(e) => setCountryInput(e.target.value)}
+                      placeholder="India, UAE, Brazil, FR, DEU..."
+                      className="flex-1 h-24 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
                     />
+                  </div>
+                  {validationErrors.length > 0 && (
+                    <p className="mt-1 text-xs text-accent-coral">
+                      Not found: {validationErrors.join(", ")}
+                    </p>
                   )}
-                  <textarea
-                    value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
-                    onChange={(e) => setCountryInput(e.target.value)}
-                    placeholder="India, UAE, Brazil, FR, DEU..."
-                    className="flex-1 h-24 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
-                  />
+                  <button
+                    onClick={handleValidateInput}
+                    className="w-full mt-2 py-2 text-sm font-medium bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
+                  >
+                    Generate Map
+                  </button>
                 </div>
-                {validationErrors.length > 0 && (
-                  <p className="mt-1 text-xs text-accent-coral">
-                    Not found: {validationErrors.join(", ")}
-                  </p>
-                )}
-                <button
-                  onClick={handleValidateInput}
-                  className="w-full mt-2 py-2 text-sm font-medium bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
-                >
-                  Generate Map
-                </button>
-              </div>
+              )}
+
+              {/* Multi-Group Mode: Group Management */}
+              {config.mode === "multi" && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider">
+                      Groups ({config.groups.length})
+                    </label>
+                    <button
+                      onClick={addGroup}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-teal text-white hover:bg-accent-teal/90 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Group
+                    </button>
+                  </div>
+
+                  {/* Group List */}
+                  <div className="space-y-3">
+                    {config.groups.map((group, index) => (
+                      <div
+                        key={group.id}
+                        className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                          activeGroupId === group.id
+                            ? "border-accent-teal bg-accent-teal/5"
+                            : "border-cream-200 dark:border-ink-700 bg-cream-100 dark:bg-ink-800 hover:border-cream-300"
+                        }`}
+                        onClick={() => setActiveGroup(group.id)}
+                      >
+                        {/* Group Header */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <input
+                            type="color"
+                            value={group.color}
+                            onChange={(e) => updateGroup(group.id, { color: e.target.value })}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-8 h-8 rounded cursor-pointer border border-cream-300 dark:border-ink-600 flex-shrink-0"
+                          />
+                          <input
+                            type="text"
+                            value={group.name}
+                            onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder={`Group ${index + 1}`}
+                            className="flex-1 px-2 py-1 text-sm font-medium bg-transparent border-b border-cream-300 dark:border-ink-600 focus:border-accent-teal focus:outline-none text-ink-800 dark:text-ink-100"
+                          />
+                          {config.groups.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeGroup(group.id);
+                              }}
+                              className="p-1.5 text-ink-400 hover:text-accent-coral hover:bg-accent-coral/10 rounded transition-colors"
+                              title="Remove group"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Country Input for this group */}
+                        <textarea
+                          value={group.countries.join(", ")}
+                          onChange={(e) => setGroupCountriesFromInput(group.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Enter countries: US, UK, FR..."
+                          className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                        />
+                        
+                        {/* Country count */}
+                        <div className="mt-1.5 text-xs text-ink-500 dark:text-ink-400">
+                          {group.countries.length} countries
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Selection Summary */}
               {hasSelection && (
@@ -699,10 +860,10 @@ export default function MapApp() {
               <div className="text-xs text-ink-500 dark:text-ink-400">
                 {hasSelection ? (
                   <span className="font-medium text-ink-700 dark:text-ink-200">
-                    {allSelectedCountries.length} countries
+                    {allSelectedCountries.length} countries selected
                   </span>
                 ) : (
-                  "Tap menu to select countries"
+                  <span>👇 Tap buttons below to start</span>
                 )}
               </div>
               <div className="flex gap-1.5">
@@ -807,22 +968,25 @@ export default function MapApp() {
             </div>
           </div>
 
-          {/* Bottom Tab Bar */}
-          <nav className="flex-shrink-0 bg-cream-50 dark:bg-ink-900 border-t border-cream-300 dark:border-ink-700 safe-area-bottom">
+          {/* Bottom Tab Bar - Fixed at bottom */}
+          <nav 
+            className="fixed bottom-0 left-0 right-0 z-40 bg-cream-50 dark:bg-ink-900 border-t border-cream-300 dark:border-ink-700"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
             <div className="flex">
               {([
                 { id: "select", label: "Select", icon: (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 )},
                 { id: "style", label: "Style", icon: (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                   </svg>
                 )},
                 { id: "export", label: "Export", icon: (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
                 )},
@@ -833,18 +997,21 @@ export default function MapApp() {
                     setMobileTab(tab.id);
                     setShowMobilePanel(true);
                   }}
-                  className={`flex-1 flex flex-col items-center py-2 transition-colors ${
+                  className={`flex-1 flex flex-col items-center py-3 transition-colors active:bg-cream-100 dark:active:bg-ink-800 ${
                     showMobilePanel && mobileTab === tab.id
                       ? "text-accent-teal"
-                      : "text-ink-500 dark:text-ink-400"
+                      : "text-ink-600 dark:text-ink-400"
                   }`}
                 >
                   {tab.icon}
-                  <span className="text-[10px] mt-0.5 font-medium">{tab.label}</span>
+                  <span className="text-xs mt-1 font-medium">{tab.label}</span>
                 </button>
               ))}
             </div>
           </nav>
+          
+          {/* Spacer for fixed bottom nav */}
+          <div className="h-16" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
         </>
       )}
     </div>
