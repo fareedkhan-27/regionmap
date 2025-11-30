@@ -40,10 +40,26 @@ export default function MapApp() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("select");
   const [mapDimensions, setMapDimensions] = useState({ width: 960, height: 540 });
   
-  // Input states
+  // Input states - separate state for each group's raw input
   const [countryInput, setCountryInput] = useState("");
+  const [countryInputTouched, setCountryInputTouched] = useState(false);
+  const [groupInputs, setGroupInputs] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Initialize group inputs when groups change
+  useEffect(() => {
+    setGroupInputs(prev => {
+      const newInputs: Record<string, string> = {};
+      config.groups.forEach(group => {
+        // Keep existing input if present, otherwise use countries from config
+        newInputs[group.id] = prev[group.id] !== undefined 
+          ? prev[group.id] 
+          : group.countries.join(", ");
+      });
+      return newInputs;
+    });
+  }, [config.groups.length]); // Only run when number of groups changes
 
   // Check for mobile viewport
   useEffect(() => {
@@ -86,7 +102,63 @@ export default function MapApp() {
     }
   }, [isDarkMode]);
 
-  // Handle country input validation
+  // Handle group input change (just update local state, don't parse yet)
+  const handleGroupInputChange = useCallback((groupId: string, value: string) => {
+    setGroupInputs(prev => ({ ...prev, [groupId]: value }));
+  }, []);
+
+  // Apply group input (parse and validate on blur or button click)
+  const applyGroupInput = useCallback((groupId: string) => {
+    const input = groupInputs[groupId] || "";
+    const result = setGroupCountriesFromInput(groupId, input);
+    // Update the input to show the validated countries
+    setGroupInputs(prev => ({ 
+      ...prev, 
+      [groupId]: result.valid.join(", ")
+    }));
+    return result;
+  }, [groupInputs, setGroupCountriesFromInput]);
+
+  // Apply all group inputs
+  const applyAllGroupInputs = useCallback(() => {
+    let allErrors: string[] = [];
+    config.groups.forEach(group => {
+      const result = applyGroupInput(group.id);
+      allErrors = [...allErrors, ...result.invalid];
+    });
+    if (allErrors.length > 0) {
+      setValidationErrors([...new Set(allErrors)]);
+    } else {
+      setValidationErrors([]);
+    }
+  }, [config.groups, applyGroupInput]);
+
+  // Handle adding a new group
+  const handleAddGroup = useCallback(() => {
+    addGroup();
+    // The new group will be added and we'll set its input in the useEffect
+  }, [addGroup]);
+
+  // Handle removing a group
+  const handleRemoveGroup = useCallback((groupId: string) => {
+    // Clean up the input state for this group
+    setGroupInputs(prev => {
+      const newInputs = { ...prev };
+      delete newInputs[groupId];
+      return newInputs;
+    });
+    // Remove the group
+    removeGroup(groupId);
+    // If this was the active group, set the first remaining group as active
+    if (activeGroupId === groupId && config.groups.length > 1) {
+      const remainingGroup = config.groups.find(g => g.id !== groupId);
+      if (remainingGroup) {
+        setActiveGroup(remainingGroup.id);
+      }
+    }
+  }, [removeGroup, activeGroupId, config.groups, setActiveGroup]);
+
+  // Handle country input validation for single mode
   const handleValidateInput = useCallback(() => {
     if (!countryInput.trim()) return;
     
@@ -149,10 +221,41 @@ export default function MapApp() {
   // Preset selection
   const handlePresetSelect = (presetId: string) => {
     applyPreset(presetId);
+    // Update the group input to reflect the preset
+    if (config.groups.length > 0) {
+      const targetGroupId = activeGroupId || config.groups[0].id;
+      const preset = REGION_PRESETS.find(p => p.id === presetId);
+      if (preset) {
+        const countriesStr = preset.countries.join(", ");
+        setGroupInputs(prev => ({
+          ...prev,
+          [targetGroupId]: countriesStr
+        }));
+        setCountryInput(countriesStr);
+        setCountryInputTouched(true);
+      }
+    }
     if (isMobile) {
       setShowMobilePanel(false);
     }
   };
+
+  // Clear all countries handler
+  const handleClearAll = useCallback(() => {
+    // Clear the config
+    clearAllCountries();
+    // Clear single mode input and mark as touched (so it shows empty)
+    setCountryInput("");
+    setCountryInputTouched(true);
+    // Clear all group inputs by setting each to empty string
+    const clearedInputs: Record<string, string> = {};
+    config.groups.forEach(group => {
+      clearedInputs[group.id] = "";
+    });
+    setGroupInputs(clearedInputs);
+    // Clear any validation errors
+    setValidationErrors([]);
+  }, [clearAllCountries, config.groups]);
 
   // Mobile bottom sheet content
   const renderMobileContent = () => {
@@ -205,7 +308,7 @@ export default function MapApp() {
                   </button>
                 ))}
                 <button
-                  onClick={clearAllCountries}
+                  onClick={handleClearAll}
                   className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
                 >
                   Clear
@@ -231,8 +334,8 @@ export default function MapApp() {
                     )}
                     <div className="flex-1">
                       <textarea
-                        value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
-                        onChange={(e) => setCountryInput(e.target.value)}
+                        value={countryInputTouched ? countryInput : (config.groups[0]?.countries.join(", ") ?? "")}
+                        onChange={(e) => { setCountryInput(e.target.value); setCountryInputTouched(true); }}
                         placeholder="India, UAE, Brazil, FR..."
                         className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
                       />
@@ -262,7 +365,7 @@ export default function MapApp() {
                       Groups ({config.groups.length})
                     </label>
                     <button
-                      onClick={addGroup}
+                      onClick={handleAddGroup}
                       className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-accent-teal text-white hover:bg-accent-teal/90 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,7 +408,7 @@ export default function MapApp() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeGroup(group.id);
+                                handleRemoveGroup(group.id);
                               }}
                               className="p-1.5 text-ink-400 hover:text-accent-coral hover:bg-accent-coral/10 rounded transition-colors"
                             >
@@ -318,10 +421,14 @@ export default function MapApp() {
 
                         {/* Country Input for this group */}
                         <textarea
-                          value={group.countries.join(", ")}
-                          onChange={(e) => setGroupCountriesFromInput(group.id, e.target.value)}
+                          value={groupInputs[group.id] !== undefined ? groupInputs[group.id] : group.countries.join(", ")}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleGroupInputChange(group.id, e.target.value);
+                          }}
+                          onBlur={() => applyGroupInput(group.id)}
                           onClick={(e) => e.stopPropagation()}
-                          placeholder="Enter countries..."
+                          placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
                         
@@ -336,7 +443,10 @@ export default function MapApp() {
 
                 {/* Generate button for multi-group */}
                 <button
-                  onClick={() => setShowMobilePanel(false)}
+                  onClick={() => {
+                    applyAllGroupInputs();
+                    setShowMobilePanel(false);
+                  }}
                   className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors"
                 >
                   Apply Changes
@@ -630,7 +740,7 @@ export default function MapApp() {
                     </button>
                   ))}
                   <button
-                    onClick={clearAllCountries}
+                    onClick={handleClearAll}
                     className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
                   >
                     Clear
@@ -654,8 +764,8 @@ export default function MapApp() {
                       />
                     )}
                     <textarea
-                      value={countryInput || (config.groups[0]?.countries.join(", ") ?? "")}
-                      onChange={(e) => setCountryInput(e.target.value)}
+                      value={countryInputTouched ? countryInput : (config.groups[0]?.countries.join(", ") ?? "")}
+                      onChange={(e) => { setCountryInput(e.target.value); setCountryInputTouched(true); }}
                       placeholder="India, UAE, Brazil, FR, DEU..."
                       className="flex-1 h-24 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
                     />
@@ -682,7 +792,7 @@ export default function MapApp() {
                       Groups ({config.groups.length})
                     </label>
                     <button
-                      onClick={addGroup}
+                      onClick={handleAddGroup}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-teal text-white hover:bg-accent-teal/90 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -725,7 +835,7 @@ export default function MapApp() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeGroup(group.id);
+                                handleRemoveGroup(group.id);
                               }}
                               className="p-1.5 text-ink-400 hover:text-accent-coral hover:bg-accent-coral/10 rounded transition-colors"
                               title="Remove group"
@@ -739,10 +849,14 @@ export default function MapApp() {
 
                         {/* Country Input for this group */}
                         <textarea
-                          value={group.countries.join(", ")}
-                          onChange={(e) => setGroupCountriesFromInput(group.id, e.target.value)}
+                          value={groupInputs[group.id] !== undefined ? groupInputs[group.id] : group.countries.join(", ")}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleGroupInputChange(group.id, e.target.value);
+                          }}
+                          onBlur={() => applyGroupInput(group.id)}
                           onClick={(e) => e.stopPropagation()}
-                          placeholder="Enter countries: US, UK, FR..."
+                          placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
                         
@@ -753,6 +867,13 @@ export default function MapApp() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Validation errors */}
+                  {validationErrors.length > 0 && (
+                    <p className="mt-2 text-xs text-accent-coral">
+                      Not found: {validationErrors.join(", ")}
+                    </p>
+                  )}
                 </div>
               )}
 

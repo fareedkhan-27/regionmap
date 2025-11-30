@@ -124,15 +124,22 @@ export function useMapConfig(): UseMapConfigReturn {
       if (filtered.length === 0) {
         return prev;
       }
+      
+      // Also update active group if we're removing the active one
+      // We need to do this inside the same state update for consistency
       return { ...prev, groups: filtered };
     });
-    setActiveGroupIdState((prev) => {
-      if (prev === groupId) {
-        return config.groups.find((g) => g.id !== groupId)?.id ?? null;
+    
+    // Update active group ID - use functional update to avoid stale closure
+    setActiveGroupIdState((prevActiveId) => {
+      if (prevActiveId === groupId) {
+        // Find another group to set as active
+        // We need to access the current groups, so we'll set to null and let the UI pick
+        return null;
       }
-      return prev;
+      return prevActiveId;
     });
-  }, [config.groups]);
+  }, []);
 
   const updateGroup = useCallback((groupId: string, updates: Partial<Group>) => {
     setConfig((prev) => ({
