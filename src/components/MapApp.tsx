@@ -1233,12 +1233,27 @@ export default function MapApp() {
             )}
             
             {/* Panel */}
-            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[60vh] flex flex-col">
-              {/* Handle */}
-              <div className="flex justify-center py-2 flex-shrink-0">
-                <div className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full" />
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[45vh] flex flex-col">
+              {/* Handle with Close Button */}
+              <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+                <div className="flex-1 flex justify-center">
+                  <button
+                    onClick={() => setShowMobilePanel(false)}
+                    className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full cursor-pointer hover:bg-cream-500 dark:hover:bg-ink-500 transition-colors"
+                    aria-label="Close panel"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowMobilePanel(false)}
+                  className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400 transition-colors"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              
+
               {/* Tab Header */}
               <div className="flex border-b border-cream-200 dark:border-ink-700 px-4 flex-shrink-0">
                 {([
@@ -1316,8 +1331,13 @@ export default function MapApp() {
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setMobileTab(tab.id);
-                    setShowMobilePanel(true);
+                    // Toggle panel if clicking the same tab that's already open
+                    if (showMobilePanel && mobileTab === tab.id) {
+                      setShowMobilePanel(false);
+                    } else {
+                      setMobileTab(tab.id);
+                      setShowMobilePanel(true);
+                    }
                   }}
                   className={`flex-1 flex flex-col items-center py-3 transition-colors active:bg-cream-100 dark:active:bg-ink-800 ${
                     showMobilePanel && mobileTab === tab.id
