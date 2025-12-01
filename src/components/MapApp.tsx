@@ -725,27 +725,27 @@ export default function MapApp() {
   };
 
   return (
-    <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "dark" : ""}`}>
+    <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "dark" : ""} ${isDarkMode ? "bg-gradient-dark" : "bg-gradient-to-br from-slate-50 to-blue-50"}`}>
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-cream-300 dark:border-ink-700 bg-cream-50 dark:bg-ink-900 z-20">
+      <header className="flex-shrink-0 border-b border-neon-cyan/20 dark:border-neon-purple/30 bg-white/70 dark:bg-void-900/70 backdrop-blur-xl z-20 shadow-lg dark:shadow-neon-purple">
         <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 rounded-lg bg-accent-teal flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-cyber flex items-center justify-center flex-shrink-0 shadow-neon animate-float">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-semibold text-ink-900 dark:text-ink-50 truncate">
+                <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-space-600 to-neon-purple dark:from-neon-cyan dark:to-neon-purple bg-clip-text text-transparent truncate">
                   Region Map Generator
                 </h1>
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-teal/10 text-accent-teal border border-accent-teal/20">
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-gold text-void-900 shadow-neon-gold">
                   v{packageJson.version}
                 </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-ink-500 dark:text-ink-400 truncate">
-                Global Region Map Visualizer • by Fareed Khan
+              <p className="text-[10px] sm:text-xs text-void-600 dark:text-neon-cyan/70 truncate font-medium">
+                Global Region Map Visualizer • by <span className="text-neon-gold">Fareed Khan</span>
               </p>
             </div>
           </div>
@@ -757,22 +757,22 @@ export default function MapApp() {
                 <button
                   onClick={handleZoomToSelection}
                   disabled={!hasSelection}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
                 >
                   Zoom to Selection
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-purple border border-space-200 dark:border-neon-purple/30 hover:border-neon-purple dark:hover:border-neon-purple hover:shadow-neon-purple transition-all duration-300"
                 >
                   Reset
                 </button>
                 <button
                   onClick={() => setShowCountryLabels(!showCountryLabels)}
-                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg backdrop-blur-sm border transition-all duration-300 ${
                     showCountryLabels
-                      ? "bg-accent-teal text-white"
-                      : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                      ? "bg-gradient-cyber text-white border-neon-cyan shadow-neon"
+                      : "bg-white/80 dark:bg-void-800/80 text-space-700 dark:text-neon-emerald border-space-200 dark:border-neon-emerald/30 hover:border-neon-emerald hover:shadow-neon-purple"
                   }`}
                   title="Toggle country name labels"
                 >
@@ -784,7 +784,7 @@ export default function MapApp() {
             {/* Dark mode toggle */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 rounded-lg bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 transition-colors"
+              className="p-2 rounded-lg bg-gradient-gold dark:bg-gradient-cyber text-void-900 dark:text-white shadow-neon-gold dark:shadow-neon hover:scale-110 transition-all duration-300"
             >
               {isDarkMode ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -801,10 +801,10 @@ export default function MapApp() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 flex overflow-hidden bg-cream-100 dark:bg-ink-950">
+      <main className="flex-1 flex overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:bg-gradient-dark">
         {/* Desktop: Side Panel */}
         {!isMobile && (
-          <aside className="w-80 flex-shrink-0 border-r border-cream-300 dark:border-ink-700 bg-cream-50 dark:bg-ink-900 overflow-y-auto">
+          <aside className="w-80 flex-shrink-0 border-r border-neon-cyan/20 dark:border-neon-purple/20 bg-white/40 dark:bg-void-900/40 backdrop-blur-xl overflow-y-auto shadow-glass">
             <div className="p-4 space-y-6">
               {/* Mode Toggle */}
               <div>
