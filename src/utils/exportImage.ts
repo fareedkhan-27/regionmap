@@ -46,35 +46,51 @@ export async function exportMapAsImage(
   // Get the current transform from the g element (zoom state)
   const gElement = svgClone.querySelector('g');
   const currentTransform = gElement?.getAttribute('transform') || '';
-  
+
+  // Parse existing transform to check if we're at zoom reset
+  let existingScale = 1;
+  let existingTranslateX = 0;
+  let existingTranslateY = 0;
+
+  const translateMatch = currentTransform.match(/translate\(([^,]+),?\s*([^)]*)\)/);
+  const scaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
+
+  if (translateMatch) {
+    existingTranslateX = parseFloat(translateMatch[1]) || 0;
+    existingTranslateY = parseFloat(translateMatch[2]) || 0;
+  }
+  if (scaleMatch) {
+    existingScale = parseFloat(scaleMatch[1]) || 1;
+  }
+
+  // Detect if we're at zoom reset (no zoom applied)
+  const isZoomReset = Math.abs(existingScale - 1) < 0.01 && Math.abs(existingTranslateX) < 5 && Math.abs(existingTranslateY) < 5;
+
   // Calculate padding and title space
-  const padding = Math.min(exportWidth, exportHeight) * 0.03; // 3% padding
+  // Use minimal padding for zoom reset to maximize map size
+  const padding = isZoomReset
+    ? Math.min(exportWidth, exportHeight) * 0.01  // 1% padding for full map
+    : Math.min(exportWidth, exportHeight) * 0.02; // 2% padding for zoomed views
   const titleSpace = options.title && options.titlePosition !== "hidden" ? exportHeight * 0.1 : 0;
-  
+
   // Available space for the map
   const availableWidth = exportWidth - (padding * 2);
   const availableHeight = exportHeight - (padding * 2) - titleSpace;
-  
-  // Calculate the natural aspect ratio of a world map (roughly 2:1)
-  // Use this to create a consistent export regardless of screen size
-  const mapAspectRatio = 2; // Width / Height for world map
-  
-  // Determine the best fit dimensions
-  let mapWidth: number, mapHeight: number;
-  if (availableWidth / availableHeight > mapAspectRatio) {
-    // Height constrained
-    mapHeight = availableHeight;
-    mapWidth = mapHeight * mapAspectRatio;
+
+  // Calculate scale to maximize canvas usage
+  // For zoom reset, use max scale; for zoomed views, preserve aspect ratio
+  let scale: number;
+  if (isZoomReset) {
+    // Max scale to fill available space edge-to-edge
+    const scaleX = availableWidth / svgWidth;
+    const scaleY = availableHeight / svgHeight;
+    scale = Math.max(scaleX, scaleY) * 0.98; // 98% to avoid any clipping
   } else {
-    // Width constrained
-    mapWidth = availableWidth;
-    mapHeight = mapWidth / mapAspectRatio;
+    // Preserve aspect ratio for zoomed/panned views
+    const scaleX = availableWidth / svgWidth;
+    const scaleY = availableHeight / svgHeight;
+    scale = Math.min(scaleX, scaleY);
   }
-  
-  // Calculate scale to fit the SVG into our target map area
-  const scaleX = mapWidth / svgWidth;
-  const scaleY = mapHeight / svgHeight;
-  const scale = Math.min(scaleX, scaleY);
   
   // Calculate position to center the map
   const scaledWidth = svgWidth * scale;
@@ -89,22 +105,6 @@ export async function exportMapAsImage(
   
   // Apply new transform that combines zoom state with export scaling
   if (gElement) {
-    // Parse existing transform to extract zoom
-    let existingScale = 1;
-    let existingTranslateX = 0;
-    let existingTranslateY = 0;
-    
-    const translateMatch = currentTransform.match(/translate\(([^,]+),?\s*([^)]*)\)/);
-    const scaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
-    
-    if (translateMatch) {
-      existingTranslateX = parseFloat(translateMatch[1]) || 0;
-      existingTranslateY = parseFloat(translateMatch[2]) || 0;
-    }
-    if (scaleMatch) {
-      existingScale = parseFloat(scaleMatch[1]) || 1;
-    }
-    
     // Combine transforms: position + existing zoom scaled
     const combinedTransform = `translate(${offsetX + existingTranslateX * scale}, ${offsetY + existingTranslateY * scale}) scale(${scale * existingScale})`;
     gElement.setAttribute('transform', combinedTransform);
