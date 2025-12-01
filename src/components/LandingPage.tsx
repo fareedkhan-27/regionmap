@@ -135,6 +135,7 @@ export default function LandingPage() {
               <a href="#features" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-all duration-300 font-medium">Features</a>
               <a href="#use-cases" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-all duration-300 font-medium">Use Cases</a>
               <a href="#presets" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-all duration-300 font-medium">Presets</a>
+              <a href="#about" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-all duration-300 font-medium">About</a>
               <Link
                 href="/app"
                 className="px-6 py-2.5 bg-gradient-cyber text-white text-sm font-bold rounded-xl hover:shadow-neon hover:scale-105 transition-all duration-300"
@@ -165,6 +166,7 @@ export default function LandingPage() {
                 <a href="#features" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-colors" onClick={() => setIsMenuOpen(false)}>Features</a>
                 <a href="#use-cases" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-colors" onClick={() => setIsMenuOpen(false)}>Use Cases</a>
                 <a href="#presets" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-colors" onClick={() => setIsMenuOpen(false)}>Presets</a>
+                <a href="#about" className="text-sm text-neon-cyan/70 hover:text-neon-cyan transition-colors" onClick={() => setIsMenuOpen(false)}>About</a>
                 <Link
                   href="/app"
                   className="px-6 py-3 bg-gradient-cyber text-white text-sm font-bold rounded-xl text-center shadow-neon"
@@ -182,7 +184,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-bold rounded-full mb-8 shadow-neon backdrop-blur-sm animate-scale-in">
             <span className="w-2 h-2 bg-neon-cyan rounded-full animate-pulse shadow-neon" />
-            100% Free • Powered by Claude AI
+            100% Free • No Sign-up Required
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight mb-8 animate-slide-up">
@@ -270,8 +272,7 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-xl text-neon-cyan/70 max-w-3xl mx-auto leading-relaxed">
-              A complete toolkit for creating professional map visualizations without design skills or expensive software—
-              <span className="text-neon-gold font-bold">powered by Claude AI</span>.
+              A complete toolkit for creating professional map visualizations without design skills or expensive software.
             </p>
           </div>
 
@@ -307,8 +308,7 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-xl text-neon-cyan/70 max-w-3xl mx-auto leading-relaxed">
-              Select entire regions with one click. No need to remember which countries belong where—
-              <span className="text-neon-purple font-bold">Claude's intelligence handles it</span>.
+              Select entire regions with one click. No need to remember which countries belong where.
             </p>
           </div>
 
@@ -370,6 +370,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* About Section */}
+      <section id="about" className="relative py-24 px-4 sm:px-6 bg-void-950/50">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 className="text-4xl sm:text-5xl font-black mb-8">
+            <span className="bg-gradient-to-r from-neon-gold via-neon-cyan to-neon-purple bg-clip-text text-transparent">
+              About This Project
+            </span>
+          </h2>
+
+          <div className="bg-void-800/60 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 border-2 border-neon-purple/30 text-left space-y-6">
+            <p className="text-lg text-neon-cyan/80 leading-relaxed">
+              Region Map Generator is a free, open-source web application designed to make professional map creation accessible to everyone—
+              whether you're a business analyst, educator, researcher, or content creator.
+            </p>
+
+            <div className="border-t border-neon-cyan/20 pt-6">
+              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                <span className="text-3xl">🤖</span>
+                Built with AI
+              </h3>
+              <p className="text-lg text-neon-cyan/70 leading-relaxed mb-4">
+                This entire application—from design to code—was created with the assistance of{" "}
+                <span className="text-neon-purple font-bold text-xl">Claude AI</span> by Anthropic.
+                Every feature, every animation, every line of code showcases the incredible capabilities of AI-assisted development.
+              </p>
+              <p className="text-neon-gold/80 font-medium italic">
+                "This is what's possible when human creativity meets artificial intelligence."
+              </p>
+            </div>
+
+            <div className="border-t border-neon-cyan/20 pt-6">
+              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                <span className="text-3xl">👨‍💻</span>
+                Creator
+              </h3>
+              <p className="text-lg text-neon-cyan/70 leading-relaxed">
+                Developed by{" "}
+                <a
+                  href="https://linkedin.com/in/fareedkhankk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neon-gold font-bold hover:text-neon-cyan transition-colors text-xl"
+                >
+                  Fareed Khan
+                </a>
+                , who envisioned a tool that combines powerful functionality with stunning design—
+                all made possible through collaboration with Claude AI.
+              </p>
+            </div>
+
+            <div className="border-t border-neon-cyan/20 pt-6">
+              <h3 className="text-2xl font-bold text-white mb-3">Technology Stack</h3>
+              <div className="flex flex-wrap gap-3">
+                {["Next.js 14", "React 18", "TypeScript", "D3.js", "Tailwind CSS", "TopoJSON", "Claude AI"].map((tech) => (
+                  <span key={tech} className="px-4 py-2 bg-gradient-to-r from-neon-cyan/20 to-neon-purple/20 border border-neon-cyan/30 rounded-lg text-white font-medium text-sm">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="relative py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto text-center relative z-10">
@@ -382,8 +446,7 @@ export default function LandingPage() {
                 Ready to Create Your Map?
               </h2>
               <p className="text-xl text-neon-cyan/70 mb-10 max-w-2xl mx-auto leading-relaxed">
-                No account needed. No watermarks. No limits. Just open the app and start creating—
-                <span className="text-neon-gold font-bold">powered by Claude AI</span>.
+                No account needed. No watermarks. No limits. Just open the app and start creating.
               </p>
               <Link
                 href="/app"
@@ -414,8 +477,6 @@ export default function LandingPage() {
                 <a href="https://linkedin.com/in/fareedkhankk" target="_blank" rel="noopener noreferrer" className="text-neon-gold hover:text-neon-cyan font-bold transition-colors">
                   Fareed Khan
                 </a>
-                {" "}with{" "}
-                <span className="text-neon-purple font-bold">Claude AI</span>
               </span>
             </div>
             <div className="flex items-center gap-6 text-sm text-neon-cyan/50">

@@ -108,10 +108,20 @@ export function useMapConfig(): UseMapConfigReturn {
     const newId = generateGroupId();
     setConfig((prev) => {
       const newIndex = prev.groups.length;
+
+      // Get all currently used colors
+      const usedColors = new Set(prev.groups.map(g => g.color));
+
+      // Find first unused color from default palette
+      const availableColor = DEFAULT_GROUP_COLORS.find(color => !usedColors.has(color));
+
+      // Use available color if found, otherwise fall back to modulo rotation
+      const newColor = availableColor ?? DEFAULT_GROUP_COLORS[newIndex % DEFAULT_GROUP_COLORS.length];
+
       const newGroup: Group = {
         id: newId,
         name: `Group ${newIndex + 1}`,
-        color: DEFAULT_GROUP_COLORS[newIndex % DEFAULT_GROUP_COLORS.length],
+        color: newColor,
         countries: [],
       };
       return {
