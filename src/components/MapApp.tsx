@@ -8,6 +8,7 @@ import { exportMapAsImage } from "@/utils/exportImage";
 import { REGION_PRESETS } from "@/data/regionPresets";
 import { formatCountryList, parseCountryInput } from "@/utils/parseCountryInput";
 import type { ResolutionOption } from "@/types/map";
+import packageJson from "../../package.json";
 
 type MobileTab = "select" | "style" | "export";
 
@@ -735,9 +736,17 @@ export default function MapApp() {
               </svg>
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold text-ink-900 dark:text-ink-50 truncate">
-                Region Map Generator
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-semibold text-ink-900 dark:text-ink-50 truncate">
+                  Region Map Generator
+                </h1>
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-teal/10 text-accent-teal border border-accent-teal/20">
+                  v{packageJson.version}
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-xs text-ink-500 dark:text-ink-400 truncate">
+                Global Region Map Visualizer • by Fareed Khan
+              </p>
             </div>
           </div>
 
