@@ -417,25 +417,39 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             const iso2 = getISO2FromFeatureId(feature.id as string | number);
             const isSelected = iso2 ? selectedCountries.includes(iso2) : false;
             const hasAnySelection = selectedCountries.length > 0;
-            
+
             // Show label if: country is selected, OR nothing is selected (show all)
             if (hasAnySelection && !isSelected) return null;
-            
+
             const countryName = (feature.properties as CountryProperties)?.name ?? "";
             const centroid = pathGenerator.centroid(feature);
-            
+
             if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null;
-            
-            // Use smaller font when showing all countries (reference mode)
-            const fontSize = hasAnySelection 
-              ? Math.max(8, Math.min(12, width / 120))
-              : Math.max(4, Math.min(6, width / 180));
-            
-            // For small countries or when showing all, use ISO code
+
+            // Calculate country bounds to determine size
+            const bounds = pathGenerator.bounds(feature);
+            const boundsWidth = bounds[1][0] - bounds[0][0];
+            const boundsHeight = bounds[1][1] - bounds[0][1];
+            const countrySize = Math.max(boundsWidth, boundsHeight);
+
+            // Only show labels for countries large enough to accommodate text
+            // This prevents overlap in crowded regions
+            const minSizeThreshold = hasAnySelection ? width * 0.02 : width * 0.015;
+            if (countrySize < minSizeThreshold) return null;
+
+            // Smaller, more conservative font sizes to prevent overlap
+            const baseFontSize = hasAnySelection
+              ? Math.max(6, Math.min(9, width / 150))  // Reduced from /120
+              : Math.max(3, Math.min(5, width / 200)); // Reduced from /180
+
+            // Scale font based on country size for better fit
+            const fontSize = Math.min(baseFontSize, countrySize / 8);
+
+            // Prefer ISO codes for cleaner look and less overlap
             const displayName = hasAnySelection
-              ? (countryName.length > 10 ? (iso2 || countryName.slice(0, 3)) : countryName)
+              ? (countryName.length > 8 ? (iso2 || countryName.slice(0, 3)) : (iso2 || countryName))
               : (iso2 || countryName.slice(0, 2));
-            
+
             return (
               <text
                 key={`label-${feature.id}`}
@@ -445,14 +459,15 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                 dominantBaseline="central"
                 fill={isDarkMode ? "#FEFDFB" : "#1A1A19"}
                 fontSize={fontSize}
-                fontWeight={hasAnySelection ? "600" : "400"}
+                fontWeight={hasAnySelection ? "500" : "400"}
                 fontFamily="system-ui, -apple-system, sans-serif"
+                letterSpacing="0.3"
                 style={{
-                  textShadow: isDarkMode 
-                    ? "0 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.5)"
-                    : "0 1px 1px rgba(255,255,255,0.9), 0 0 3px rgba(255,255,255,0.7)",
+                  textShadow: isDarkMode
+                    ? "0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.6)"
+                    : "0 1px 1px rgba(255,255,255,0.95), 0 0 2px rgba(255,255,255,0.8)",
                   pointerEvents: "none",
-                  opacity: hasAnySelection ? 1 : 0.8,
+                  opacity: hasAnySelection ? 0.95 : 0.75,
                 }}
               >
                 {displayName}

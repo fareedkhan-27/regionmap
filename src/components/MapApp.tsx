@@ -637,7 +637,7 @@ export default function MapApp() {
                           }}
                           onFocus={() => setActiveGroup(group.id)}
                           placeholder="Enter countries: US, UK, France..."
-                          className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                          className="w-full h-16 px-2 py-1.5 text-base sm:text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
 
                         {/* Country count */}
@@ -1215,7 +1215,7 @@ export default function MapApp() {
                           }}
                           onFocus={() => setActiveGroup(group.id)}
                           placeholder="Enter countries: US, UK, France..."
-                          className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                          className="w-full h-16 px-2 py-1.5 text-base sm:text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
 
                         {/* Country count */}
