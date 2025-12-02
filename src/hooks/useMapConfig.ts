@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type {
   MapConfig,
   Mode,
@@ -54,6 +54,11 @@ export interface UseMapConfigReturn {
   allSelectedCountries: CountryCode[];
   countryColorMap: Record<CountryCode, string>;
   hasSelection: boolean;
+  // History
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   // Reset
   resetConfig: () => void;
 }
@@ -63,6 +68,28 @@ export function useMapConfig(): UseMapConfigReturn {
   const [activeGroupId, setActiveGroupIdState] = useState<string | null>(
     DEFAULT_MAP_CONFIG.groups[0]?.id ?? null
   );
+
+  // History management for undo/redo
+  const [history, setHistory] = useState<MapConfig[]>([DEFAULT_MAP_CONFIG]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  // Helper to add state to history
+  const saveToHistory = useCallback((newConfig: MapConfig) => {
+    setHistory((prev) => {
+      // Remove any "future" states if we're not at the end
+      const newHistory = prev.slice(0, historyIndex + 1);
+      // Add new state
+      newHistory.push(newConfig);
+      // Limit history to 50 states
+      if (newHistory.length > 50) {
+        newHistory.shift();
+        setHistoryIndex((prev) => Math.max(0, prev));
+        return newHistory;
+      }
+      setHistoryIndex(newHistory.length - 1);
+      return newHistory;
+    });
+  }, [historyIndex]);
 
   // Mode
   const setMode = useCallback((mode: Mode) => {
@@ -310,10 +337,41 @@ export function useMapConfig(): UseMapConfigReturn {
 
   const hasSelection = allSelectedCountries.length > 0;
 
+  // History - Undo/Redo
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setConfig(history[newIndex]);
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setConfig(history[newIndex]);
+    }
+  }, [history, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Save to history whenever config changes (but not when loading from history)
+  const configRef = useRef(config);
+  useEffect(() => {
+    if (configRef.current !== config && history[historyIndex] !== config) {
+      saveToHistory(config);
+    }
+    configRef.current = config;
+  }, [config, history, historyIndex, saveToHistory]);
+
   // Reset
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_MAP_CONFIG);
     setActiveGroupIdState(DEFAULT_MAP_CONFIG.groups[0]?.id ?? null);
+    setHistory([DEFAULT_MAP_CONFIG]);
+    setHistoryIndex(0);
   }, []);
 
   return {
@@ -340,6 +398,10 @@ export function useMapConfig(): UseMapConfigReturn {
     allSelectedCountries,
     countryColorMap,
     hasSelection,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     resetConfig,
   };
 }

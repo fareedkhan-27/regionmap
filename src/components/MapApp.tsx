@@ -35,6 +35,10 @@ export default function MapApp() {
     allSelectedCountries,
     countryColorMap,
     hasSelection,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useMapConfig();
 
   // LOCAL state for active group - don't rely on hook
@@ -102,6 +106,22 @@ export default function MapApp() {
       document.documentElement.classList.remove("dark");
     }
   }, [isDarkMode]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   // Handle group input change (just update local state, don't parse yet)
   const handleGroupInputChange = useCallback((groupId: string, value: string) => {
@@ -516,6 +536,27 @@ export default function MapApp() {
                           )}
                         </div>
 
+                        {/* Pattern selector */}
+                        <div className="flex gap-1 mb-2">
+                          {(["solid", "stripes", "dots", "crosshatch", "diagonal"] as const).map((patternType) => (
+                            <button
+                              key={patternType}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateGroup(group.id, { pattern: patternType });
+                              }}
+                              className={`flex-1 px-1.5 py-1 text-[10px] font-medium rounded transition-colors ${
+                                (group.pattern || "solid") === patternType
+                                  ? "bg-accent-teal text-white"
+                                  : "bg-cream-100 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                              }`}
+                              title={patternType}
+                            >
+                              {patternType === "solid" ? "●" : patternType === "stripes" ? "|||" : patternType === "dots" ? "⋮⋮" : patternType === "crosshatch" ? "╬" : "/"}
+                            </button>
+                          ))}
+                        </div>
+
                         {/* Country Input for this group */}
                         <textarea
                           value={groupInputs[group.id] ?? ""}
@@ -532,7 +573,7 @@ export default function MapApp() {
                           placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
-                        
+
                         {/* Country count */}
                         <div className="mt-1.5 text-xs text-ink-500 dark:text-ink-400">
                           {group.countries.length} countries
@@ -782,6 +823,26 @@ export default function MapApp() {
             {!isMobile && (
               <>
                 <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
+                  title="Undo (Ctrl+Z)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!canRedo}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
+                  title="Redo (Ctrl+Y)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+                  </svg>
+                </button>
+                <button
                   onClick={handleZoomToSelection}
                   disabled={!hasSelection}
                   className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
@@ -1016,6 +1077,27 @@ export default function MapApp() {
                           )}
                         </div>
 
+                        {/* Pattern selector */}
+                        <div className="flex gap-1 mb-2">
+                          {(["solid", "stripes", "dots", "crosshatch", "diagonal"] as const).map((patternType) => (
+                            <button
+                              key={patternType}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateGroup(group.id, { pattern: patternType });
+                              }}
+                              className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+                                (group.pattern || "solid") === patternType
+                                  ? "bg-accent-teal text-white"
+                                  : "bg-cream-100 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                              }`}
+                              title={patternType}
+                            >
+                              {patternType === "solid" ? "●" : patternType === "stripes" ? "|||" : patternType === "dots" ? "⋮⋮" : patternType === "crosshatch" ? "╬" : "/"}
+                            </button>
+                          ))}
+                        </div>
+
                         {/* Country Input for this group */}
                         <textarea
                           value={groupInputs[group.id] ?? ""}
@@ -1032,7 +1114,7 @@ export default function MapApp() {
                           placeholder="Enter countries: US, UK, France..."
                           className="w-full h-16 px-2 py-1.5 text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
                         />
-                        
+
                         {/* Country count */}
                         <div className="mt-1.5 text-xs text-ink-500 dark:text-ink-400">
                           {group.countries.length} countries

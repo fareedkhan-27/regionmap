@@ -256,6 +256,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           <filter id="country-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.15" />
           </filter>
+
           {/* Pattern for non-selected countries */}
           <pattern
             id="subtle-pattern"
@@ -265,6 +266,50 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           >
             <rect width="4" height="4" fill={colors.land} />
           </pattern>
+
+          {/* Patterns for each group */}
+          {config.groups.map((group) => {
+            const patternId = `pattern-${group.id}`;
+            const pattern = group.pattern || "solid";
+
+            if (pattern === "solid") return null;
+
+            return (
+              <pattern
+                key={patternId}
+                id={patternId}
+                patternUnits="userSpaceOnUse"
+                width="8"
+                height="8"
+                patternTransform="rotate(0)"
+              >
+                <rect width="8" height="8" fill={group.color} opacity="0.3" />
+                {pattern === "stripes" && (
+                  <>
+                    <line x1="0" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="3" />
+                    <line x1="4" y1="0" x2="4" y2="8" stroke={group.color} strokeWidth="3" />
+                  </>
+                )}
+                {pattern === "dots" && (
+                  <>
+                    <circle cx="2" cy="2" r="1.5" fill={group.color} />
+                    <circle cx="6" cy="6" r="1.5" fill={group.color} />
+                  </>
+                )}
+                {pattern === "crosshatch" && (
+                  <>
+                    <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="1.5" />
+                    <line x1="8" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="1.5" />
+                  </>
+                )}
+                {pattern === "diagonal" && (
+                  <>
+                    <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="2" />
+                  </>
+                )}
+              </pattern>
+            );
+          })}
         </defs>
 
         <g ref={gRef}>
@@ -283,11 +328,27 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             const isSelected = iso2 ? selectedCountries.includes(iso2) : false;
             const fillColor = iso2 ? countryColorMap[iso2] : null;
 
+            // Find which group this country belongs to (for pattern)
+            const countryGroup = iso2 ? config.groups.find(g => g.countries.includes(iso2)) : null;
+            const pattern = countryGroup?.pattern || "solid";
+
+            // Determine fill: pattern URL or solid color
+            let fill: string;
+            if (isSelected && fillColor) {
+              if (pattern !== "solid" && countryGroup) {
+                fill = `url(#pattern-${countryGroup.id})`;
+              } else {
+                fill = fillColor;
+              }
+            } else {
+              fill = colors.land;
+            }
+
             return (
               <path
                 key={feature.id ?? Math.random()}
                 d={pathGenerator(feature) ?? undefined}
-                fill={isSelected && fillColor ? fillColor : colors.land}
+                fill={fill}
                 stroke={colors.border}
                 strokeWidth={isSelected ? 0.75 : 0.5}
                 strokeLinejoin="round"

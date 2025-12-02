@@ -3,10 +3,13 @@
 export type Mode = "single" | "multi";
 export type CountryCode = string; // ISO2 codes
 
+export type PatternType = "solid" | "stripes" | "dots" | "crosshatch" | "diagonal";
+
 export interface Group {
   id: string;
   name: string;
   color: string; // HEX color
+  pattern?: PatternType; // Optional pattern fill
   countries: CountryCode[]; // Array of ISO2 codes
 }
 
