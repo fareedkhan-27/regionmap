@@ -35,6 +35,7 @@ export interface UseMapConfigReturn {
     groupId: string,
     input: string
   ) => { valid: CountryCode[]; invalid: string[] };
+  toggleCountryInGroup: (groupId: string, countryCode: CountryCode) => void;
   getActiveGroup: () => Group | null;
   setActiveGroup: (groupId: string) => void;
   activeGroupId: string | null;
@@ -178,6 +179,27 @@ export function useMapConfig(): UseMapConfigReturn {
     [setGroupCountries]
   );
 
+  const toggleCountryInGroup = useCallback(
+    (groupId: string, countryCode: CountryCode) => {
+      setConfig((prev) => ({
+        ...prev,
+        groups: prev.groups.map((g) => {
+          if (g.id === groupId) {
+            const isSelected = g.countries.includes(countryCode);
+            return {
+              ...g,
+              countries: isSelected
+                ? g.countries.filter((c) => c !== countryCode)
+                : [...g.countries, countryCode],
+            };
+          }
+          return g;
+        }),
+      }));
+    },
+    []
+  );
+
   const getActiveGroup = useCallback((): Group | null => {
     return config.groups.find((g) => g.id === activeGroupId) ?? null;
   }, [config.groups, activeGroupId]);
@@ -302,6 +324,7 @@ export function useMapConfig(): UseMapConfigReturn {
     updateGroup,
     setGroupCountries,
     setGroupCountriesFromInput,
+    toggleCountryInGroup,
     getActiveGroup,
     setActiveGroup,
     activeGroupId,

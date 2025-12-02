@@ -23,7 +23,7 @@ export interface BackgroundConfig {
   color?: string;
 }
 
-export type ResolutionOption = "1080p" | "4k" | "square";
+export type ResolutionOption = "1080p" | "4k" | "square" | "svg";
 
 export interface MapConfig {
   mode: Mode;
@@ -43,6 +43,7 @@ export const RESOLUTION_DIMENSIONS: Record<
   "1080p": { width: 1920, height: 1080 },
   "4k": { width: 3840, height: 2160 },
   square: { width: 2048, height: 2048 },
+  svg: { width: 1920, height: 1080 }, // SVG uses viewBox, actual size is scalable
 };
 
 // Default colors for groups

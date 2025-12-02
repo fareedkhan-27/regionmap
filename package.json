@@ -1,6 +1,6 @@
 {
   "name": "region-map-generator",
-  "version": "2.1.2",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

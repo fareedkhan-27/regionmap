@@ -3,7 +3,7 @@
 import { RESOLUTION_DIMENSIONS, type ResolutionOption } from "@/types/map";
 
 export interface ExportOptions {
-  format: "png" | "jpg";
+  format: "png" | "jpg" | "svg";
   resolution: ResolutionOption;
   background: { type: "transparent" | "solid"; color?: string };
   title?: string;
@@ -274,4 +274,167 @@ export function getResolutionDimensions(
   resolution: ResolutionOption
 ): { width: number; height: number } {
   return RESOLUTION_DIMENSIONS[resolution];
+}
+
+/**
+ * Export SVG element as an SVG file
+ * This creates a standalone SVG with inlined styles
+ */
+export async function exportMapAsSvg(
+  svgElement: SVGSVGElement,
+  options: ExportOptions
+): Promise<void> {
+  const { width: exportWidth, height: exportHeight } =
+    options.resolution === "svg"
+      ? RESOLUTION_DIMENSIONS["1080p"] // Default size for SVG
+      : RESOLUTION_DIMENSIONS[options.resolution];
+
+  // Get the current SVG dimensions
+  const svgWidth = svgElement.width.baseVal.value || svgElement.clientWidth || 960;
+  const svgHeight = svgElement.height.baseVal.value || svgElement.clientHeight || 540;
+
+  // Clone the SVG to avoid modifying the original
+  const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+
+  // Get the current transform from the g element (zoom state)
+  const gElement = svgClone.querySelector('g');
+  const currentTransform = gElement?.getAttribute('transform') || '';
+
+  // Parse existing transform to preserve zoom state
+  let existingScale = 1;
+  let existingTranslateX = 0;
+  let existingTranslateY = 0;
+
+  const translateMatch = currentTransform.match(/translate\(([^,]+),?\s*([^)]*)\)/);
+  const scaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
+
+  if (translateMatch) {
+    existingTranslateX = parseFloat(translateMatch[1]) || 0;
+    existingTranslateY = parseFloat(translateMatch[2]) || 0;
+  }
+  if (scaleMatch) {
+    existingScale = parseFloat(scaleMatch[1]) || 1;
+  }
+
+  // Detect if we're at zoom reset
+  const isZoomReset = Math.abs(existingScale - 1) < 0.01 &&
+                      Math.abs(existingTranslateX) < 5 &&
+                      Math.abs(existingTranslateY) < 5;
+
+  // Calculate padding and title space
+  const padding = isZoomReset
+    ? Math.min(exportWidth, exportHeight) * 0.01
+    : Math.min(exportWidth, exportHeight) * 0.02;
+  const titleSpace = options.title && options.titlePosition !== "hidden"
+    ? exportHeight * 0.1
+    : 0;
+
+  // Available space for the map
+  const availableWidth = exportWidth - (padding * 2);
+  const availableHeight = exportHeight - (padding * 2) - titleSpace;
+
+  // Calculate scale to maximize canvas usage
+  let scale: number;
+  if (isZoomReset) {
+    const scaleX = availableWidth / svgWidth;
+    const scaleY = availableHeight / svgHeight;
+    scale = Math.max(scaleX, scaleY) * 0.98;
+  } else {
+    const scaleX = availableWidth / svgWidth;
+    const scaleY = availableHeight / svgHeight;
+    scale = Math.min(scaleX, scaleY);
+  }
+
+  // Calculate position to center the map
+  const scaledWidth = svgWidth * scale;
+  const scaledHeight = svgHeight * scale;
+  const offsetX = padding + (availableWidth - scaledWidth) / 2;
+  const offsetY = padding + titleSpace + (availableHeight - scaledHeight) / 2;
+
+  // Update SVG attributes for export
+  svgClone.setAttribute("width", String(exportWidth));
+  svgClone.setAttribute("height", String(exportHeight));
+  svgClone.setAttribute("viewBox", `0 0 ${exportWidth} ${exportHeight}`);
+  svgClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+  // Set background
+  if (options.background.type === "solid") {
+    svgClone.style.backgroundColor = options.background.color ?? "#FEFDFB";
+  } else {
+    svgClone.style.backgroundColor = "transparent";
+  }
+
+  // Apply new transform that combines zoom state with export scaling
+  if (gElement) {
+    const combinedTransform = `translate(${offsetX + existingTranslateX * scale}, ${offsetY + existingTranslateY * scale}) scale(${scale * existingScale})`;
+    gElement.setAttribute('transform', combinedTransform);
+  }
+
+  // Inline all styles to ensure they're captured in export
+  inlineStyles(svgClone);
+
+  // Add title and subtitle as SVG text elements if provided
+  if (options.title && options.titlePosition !== "hidden") {
+    const fontFamily = FONT_FAMILIES[options.fontFamily ?? "sans"];
+    const sizes = FONT_SIZES[options.fontSize ?? "md"];
+
+    const scaleFactor = exportWidth / 1920;
+    const titleSize = Math.round(sizes.title * scaleFactor);
+    const subtitleSize = Math.round(sizes.subtitle * scaleFactor);
+    const textPadding = Math.round(40 * scaleFactor);
+
+    const isCenter = options.titlePosition === "top-center";
+    const x = isCenter ? exportWidth / 2 : textPadding;
+    const textAnchor = isCenter ? "middle" : "start";
+
+    // Create title text element
+    const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    titleText.setAttribute("x", String(x));
+    titleText.setAttribute("y", String(textPadding + titleSize * 0.8));
+    titleText.setAttribute("font-family", fontFamily);
+    titleText.setAttribute("font-size", String(titleSize));
+    titleText.setAttribute("font-weight", "600");
+    titleText.setAttribute("fill", "#1A1A19");
+    titleText.setAttribute("text-anchor", textAnchor);
+    titleText.textContent = options.title;
+    svgClone.appendChild(titleText);
+
+    // Create subtitle text element if provided
+    if (options.subtitle) {
+      const subtitleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      subtitleText.setAttribute("x", String(x));
+      subtitleText.setAttribute("y", String(textPadding + titleSize + subtitleSize * 0.8));
+      subtitleText.setAttribute("font-family", fontFamily);
+      subtitleText.setAttribute("font-size", String(subtitleSize));
+      subtitleText.setAttribute("font-weight", "400");
+      subtitleText.setAttribute("fill", "#6B6B63");
+      subtitleText.setAttribute("text-anchor", textAnchor);
+      subtitleText.textContent = options.subtitle;
+      svgClone.appendChild(subtitleText);
+    }
+  }
+
+  // Serialize SVG to string
+  const serializer = new XMLSerializer();
+  let svgString = serializer.serializeToString(svgClone);
+
+  // Ensure proper XML declaration
+  if (!svgString.match(/^<\?xml/)) {
+    svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + svgString;
+  }
+
+  // Create blob and download
+  const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${options.filename ?? "region-map"}.svg`;
+
+  // Trigger download
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Cleanup
+  URL.revokeObjectURL(url);
 }

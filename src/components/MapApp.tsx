@@ -4,7 +4,7 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import WorldMap, { type WorldMapHandle } from "./WorldMap";
 import Legend from "./Legend";
 import { useMapConfig } from "@/hooks/useMapConfig";
-import { exportMapAsImage } from "@/utils/exportImage";
+import { exportMapAsImage, exportMapAsSvg } from "@/utils/exportImage";
 import { REGION_PRESETS } from "@/data/regionPresets";
 import { formatCountryList, parseCountryInput } from "@/utils/parseCountryInput";
 import type { ResolutionOption } from "@/types/map";
@@ -21,6 +21,7 @@ export default function MapApp() {
     removeGroup: removeGroupFromConfig,
     updateGroup,
     setGroupCountriesFromInput,
+    toggleCountryInGroup,
     setActiveGroup: setActiveGroupInConfig,
     activeGroupId: activeGroupIdFromConfig,
     applyPreset,
@@ -209,15 +210,15 @@ export default function MapApp() {
 
   // Export handler
   const handleExport = useCallback(
-    async (format: "png" | "jpg") => {
+    async (format: "png" | "jpg" | "svg") => {
       const svg = mapRef.current?.getSvgElement();
       if (!svg) return;
 
       setIsExporting(true);
       setExportSuccess(false);
-      
+
       try {
-        await exportMapAsImage(svg, {
+        const exportOptions = {
           format,
           resolution: config.resolution,
           background: config.background,
@@ -229,12 +230,19 @@ export default function MapApp() {
           filename: config.titleConfig.title
             ? config.titleConfig.title.toLowerCase().replace(/\s+/g, "-")
             : "region-map",
-        });
+        };
+
+        if (format === "svg") {
+          await exportMapAsSvg(svg, exportOptions);
+        } else {
+          await exportMapAsImage(svg, exportOptions);
+        }
+
         setExportSuccess(true);
         setTimeout(() => setExportSuccess(false), 3000);
       } catch (err) {
         console.error("Export failed:", err);
-        alert("Failed to export image. Please try again.");
+        alert("Failed to export. Please try again.");
       } finally {
         setIsExporting(false);
       }
@@ -245,6 +253,15 @@ export default function MapApp() {
   // Zoom controls
   const handleZoomToSelection = () => mapRef.current?.zoomToSelection();
   const handleResetZoom = () => mapRef.current?.resetZoom();
+
+  // Country click handler
+  const handleCountryClick = useCallback((iso2: string) => {
+    // Determine which group to toggle the country in
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+
+    toggleCountryInGroup(targetGroupId, iso2);
+  }, [activeGroupId, config.groups, toggleCountryInGroup]);
 
   // Preset selection - applies to active group only
   const handlePresetSelect = useCallback((presetId: string) => {
@@ -711,6 +728,16 @@ export default function MapApp() {
                 </svg>
                 Export JPG
               </button>
+              <button
+                onClick={() => handleExport("svg")}
+                disabled={isExporting}
+                className="w-full py-3.5 text-sm font-semibold bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-500 dark:hover:bg-purple-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Export SVG
+              </button>
             </div>
 
             {/* Success Message */}
@@ -1097,7 +1124,7 @@ export default function MapApp() {
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => handleExport("png")}
                       disabled={isExporting}
@@ -1111,6 +1138,13 @@ export default function MapApp() {
                       className="py-2.5 text-sm font-semibold bg-ink-700 text-white rounded-lg hover:bg-ink-600 disabled:opacity-50 transition-colors"
                     >
                       {isExporting ? "..." : "JPG"}
+                    </button>
+                    <button
+                      onClick={() => handleExport("svg")}
+                      disabled={isExporting}
+                      className="py-2.5 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 transition-colors"
+                    >
+                      {isExporting ? "..." : "SVG"}
                     </button>
                   </div>
                 </div>
@@ -1167,6 +1201,7 @@ export default function MapApp() {
               height={mapDimensions.height}
               isDarkMode={isDarkMode}
               showLabels={showCountryLabels}
+              onCountryClick={handleCountryClick}
               className="rounded-lg shadow-lg"
             />
 

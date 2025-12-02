@@ -35,6 +35,7 @@ interface WorldMapProps {
   className?: string;
   isDarkMode?: boolean;
   showLabels?: boolean;
+  onCountryClick?: (iso2: CountryCode) => void;
 }
 
 export interface WorldMapHandle {
@@ -54,6 +55,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       className = "",
       isDarkMode = false,
       showLabels = false,
+      onCountryClick,
     },
     ref
   ) => {
@@ -292,13 +294,22 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                 filter={isSelected ? "url(#country-shadow)" : undefined}
                 data-iso2={iso2 ?? undefined}
                 data-name={(feature.properties as CountryProperties)?.name}
-                className={`transition-colors duration-200 ${
+                onClick={() => {
+                  if (iso2 && onCountryClick) {
+                    onCountryClick(iso2);
+                  }
+                }}
+                className={`transition-all duration-200 ${
                   isSelected ? "opacity-100" : "opacity-90"
-                }`}
+                } ${onCountryClick ? "cursor-pointer hover:opacity-100 hover:brightness-95" : ""}`}
+                style={{
+                  pointerEvents: onCountryClick ? "auto" : "none",
+                }}
               >
                 <title>
                   {(feature.properties as CountryProperties)?.name ?? "Unknown"}
                   {iso2 ? ` (${iso2})` : ""}
+                  {onCountryClick ? " (click to select)" : ""}
                 </title>
               </path>
             );

@@ -145,7 +145,14 @@ export const ISO2_TO_NUMERIC: Record<string, string> = Object.fromEntries(
 
 // Get ISO2 code from a feature's ID (handles various formats)
 export function getISO2FromFeatureId(id: string | number): string | null {
-  const idStr = String(id).padStart(3, "0");
+  // Handle negative IDs (like Kosovo: -99) specially
+  const idNum = typeof id === 'number' ? id : parseInt(id, 10);
+  if (idNum < 0) {
+    // For negative IDs, use the string directly
+    return ISO_NUMERIC_TO_ISO2[String(idNum)] ?? null;
+  }
+  // For positive IDs, pad to 3 digits
+  const idStr = String(idNum).padStart(3, "0");
   return ISO_NUMERIC_TO_ISO2[idStr] ?? null;
 }
 
