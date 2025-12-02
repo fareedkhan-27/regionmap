@@ -39,6 +39,10 @@ export default function MapApp() {
     redo,
     canUndo,
     canRedo,
+    randomizeGroupColors,
+    colorAllCountries,
+    exportConfig,
+    importConfig,
   } = useMapConfig();
 
   // LOCAL state for active group - don't rely on hook
@@ -282,6 +286,68 @@ export default function MapApp() {
 
     toggleCountryInGroup(targetGroupId, iso2);
   }, [activeGroupId, config.groups, toggleCountryInGroup]);
+
+  // Save/Load handlers
+  const handleSaveConfig = useCallback(() => {
+    const json = exportConfig();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `map-config-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [exportConfig]);
+
+  const handleLoadConfig = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const json = event.target?.result as string;
+        const success = importConfig(json);
+        if (!success) {
+          alert('Failed to load configuration. Invalid file format.');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [importConfig]);
+
+  // URL Sharing handler
+  const handleShareURL = useCallback(() => {
+    try {
+      const json = exportConfig();
+      const compressed = btoa(encodeURIComponent(json));
+      const url = `${window.location.origin}${window.location.pathname}?config=${compressed}`;
+      navigator.clipboard.writeText(url);
+      alert('Share URL copied to clipboard!');
+    } catch {
+      alert('Failed to generate share URL. Configuration may be too large.');
+    }
+  }, [exportConfig]);
+
+  // Load config from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const configParam = params.get('config');
+    if (configParam) {
+      try {
+        const json = decodeURIComponent(atob(configParam));
+        importConfig(json);
+      } catch {
+        console.error('Failed to load configuration from URL');
+      }
+    }
+  }, [importConfig]);
 
   // Preset selection - applies to active group only
   const handlePresetSelect = useCallback((presetId: string) => {
@@ -865,6 +931,43 @@ export default function MapApp() {
                   title="Toggle country name labels"
                 >
                   Labels
+                </button>
+                {/* Random & Fun Features */}
+                <button
+                  onClick={randomizeGroupColors}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-pink border border-space-200 dark:border-neon-pink/30 hover:border-neon-pink dark:hover:border-neon-pink hover:shadow-neon-pink transition-all duration-300"
+                  title="Randomize group colors"
+                >
+                  🎨 Random
+                </button>
+                <button
+                  onClick={colorAllCountries}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white border border-purple-400 hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
+                  title="Color all countries in the world"
+                >
+                  🌍 All
+                </button>
+                {/* Save/Load/Share */}
+                <button
+                  onClick={handleSaveConfig}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
+                  title="Save configuration"
+                >
+                  💾
+                </button>
+                <button
+                  onClick={handleLoadConfig}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
+                  title="Load configuration"
+                >
+                  📂
+                </button>
+                <button
+                  onClick={handleShareURL}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-purple border border-space-200 dark:border-neon-purple/30 hover:border-neon-purple dark:hover:border-neon-purple hover:shadow-neon-purple transition-all duration-300"
+                  title="Copy share URL"
+                >
+                  🔗
                 </button>
               </>
             )}

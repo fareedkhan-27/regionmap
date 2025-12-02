@@ -63,6 +63,29 @@ export const DEFAULT_GROUP_COLORS = [
   "#FEE440", // Yellow
 ];
 
+// Generate a random color
+export function generateRandomColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 60 + Math.floor(Math.random() * 30); // 60-90%
+  const lightness = 45 + Math.floor(Math.random() * 20); // 45-65%
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+// Generate N distinct random colors
+export function generateDistinctColors(count: number): string[] {
+  const colors: string[] = [];
+  const hueStep = 360 / count;
+
+  for (let i = 0; i < count; i++) {
+    const hue = Math.floor((i * hueStep + Math.random() * (hueStep * 0.5)) % 360);
+    const saturation = 60 + Math.floor(Math.random() * 25);
+    const lightness = 45 + Math.floor(Math.random() * 15);
+    colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+  }
+
+  return colors;
+}
+
 // Default map configuration
 export const DEFAULT_MAP_CONFIG: MapConfig = {
   mode: "single",

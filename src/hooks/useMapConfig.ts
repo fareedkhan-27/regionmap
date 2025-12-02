@@ -10,9 +10,10 @@ import type {
   ResolutionOption,
   CountryCode,
 } from "@/types/map";
-import { DEFAULT_MAP_CONFIG, DEFAULT_GROUP_COLORS } from "@/types/map";
+import { DEFAULT_MAP_CONFIG, DEFAULT_GROUP_COLORS, generateDistinctColors, generateRandomColor } from "@/types/map";
 import { getPresetById } from "@/data/regionPresets";
 import { parseCountryInput, validateCountryCodes } from "@/utils/parseCountryInput";
+import { COUNTRY_ALIASES } from "@/data/countryAliases";
 
 // Generate unique IDs for groups
 // Start at 1 because "group-1" is the default initial group
@@ -59,6 +60,12 @@ export interface UseMapConfigReturn {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  // Random & Special
+  randomizeGroupColors: () => void;
+  colorAllCountries: () => void;
+  // Save/Load
+  exportConfig: () => string;
+  importConfig: (json: string) => boolean;
   // Reset
   resetConfig: () => void;
 }
@@ -357,6 +364,67 @@ export function useMapConfig(): UseMapConfigReturn {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  // Random & Special Features
+  const randomizeGroupColors = useCallback(() => {
+    setConfig((prev) => {
+      const colors = generateDistinctColors(prev.groups.length);
+      return {
+        ...prev,
+        groups: prev.groups.map((g, i) => ({ ...g, color: colors[i] })),
+      };
+    });
+  }, []);
+
+  const colorAllCountries = useCallback(() => {
+    // Get all country ISO2 codes
+    const allCountries = COUNTRY_ALIASES.map(c => c.iso2);
+    const colors = generateDistinctColors(allCountries.length);
+
+    // Create individual groups for each country (or divide into chunks)
+    // For better performance, let's divide into ~20 groups with multiple countries each
+    const groupSize = Math.ceil(allCountries.length / 20);
+    const newGroups: Group[] = [];
+
+    for (let i = 0; i < allCountries.length; i += groupSize) {
+      const groupCountries = allCountries.slice(i, i + groupSize);
+      const groupColor = colors[Math.floor(i / groupSize) % colors.length];
+
+      newGroups.push({
+        id: `rainbow-${i}`,
+        name: `Group ${newGroups.length + 1}`,
+        color: groupColor,
+        countries: groupCountries,
+      });
+    }
+
+    setConfig((prev) => ({
+      ...prev,
+      mode: "multi",
+      groups: newGroups,
+    }));
+    setActiveGroupIdState(newGroups[0]?.id ?? null);
+  }, []);
+
+  // Save/Load Configuration
+  const exportConfig = useCallback((): string => {
+    return JSON.stringify(config, null, 2);
+  }, [config]);
+
+  const importConfig = useCallback((json: string): boolean => {
+    try {
+      const imported = JSON.parse(json) as MapConfig;
+      // Validate basic structure
+      if (!imported.groups || !Array.isArray(imported.groups)) {
+        return false;
+      }
+      setConfig(imported);
+      setActiveGroupIdState(imported.groups[0]?.id ?? null);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Save to history whenever config changes (but not when loading from history)
   const configRef = useRef(config);
   useEffect(() => {
@@ -402,6 +470,10 @@ export function useMapConfig(): UseMapConfigReturn {
     redo,
     canUndo,
     canRedo,
+    randomizeGroupColors,
+    colorAllCountries,
+    exportConfig,
+    importConfig,
     resetConfig,
   };
 }

@@ -64,6 +64,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
     const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
     const projectionRef = useRef(createProjection(width, height));
 
@@ -241,6 +242,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
     const graticule = createGraticule();
 
     return (
+      <>
       <svg
         ref={svgRef}
         width={width}
@@ -360,17 +362,51 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                     onCountryClick(iso2);
                   }
                 }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  const countryName = (feature.properties as CountryProperties)?.name ?? "Unknown";
+                  const touch = e.touches[0];
+                  if (touch) {
+                    setTooltip({
+                      x: touch.clientX,
+                      y: touch.clientY - 40,
+                      text: `${countryName}${iso2 ? ` (${iso2})` : ""}`,
+                    });
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  setTimeout(() => setTooltip(null), 1500);
+                  if (iso2 && onCountryClick) {
+                    onCountryClick(iso2);
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  const countryName = (feature.properties as CountryProperties)?.name ?? "Unknown";
+                  setTooltip({
+                    x: e.clientX,
+                    y: e.clientY - 40,
+                    text: `${countryName}${iso2 ? ` (${iso2})` : ""}`,
+                  });
+                }}
+                onMouseMove={(e) => {
+                  setTooltip((prev) =>
+                    prev ? { ...prev, x: e.clientX, y: e.clientY - 40 } : null
+                  );
+                }}
+                onMouseLeave={() => {
+                  setTooltip(null);
+                }}
                 className={`transition-all duration-200 ${
                   isSelected ? "opacity-100" : "opacity-90"
                 } ${onCountryClick ? "cursor-pointer hover:opacity-100 hover:brightness-95" : ""}`}
                 style={{
-                  pointerEvents: onCountryClick ? "auto" : "none",
+                  pointerEvents: "auto",
                 }}
               >
                 <title>
                   {(feature.properties as CountryProperties)?.name ?? "Unknown"}
                   {iso2 ? ` (${iso2})` : ""}
-                  {onCountryClick ? " (click to select)" : ""}
                 </title>
               </path>
             );
@@ -425,6 +461,24 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           })}
         </g>
       </svg>
+
+      {/* Floating tooltip for mobile/iPad and desktop */}
+      {tooltip && (
+        <div
+          style={{
+            position: 'fixed',
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+          className="px-3 py-1.5 bg-ink-900 dark:bg-white text-white dark:text-ink-900 rounded-lg shadow-lg text-sm font-medium whitespace-nowrap"
+        >
+          {tooltip.text}
+        </div>
+      )}
+    </>
     );
   }
 );
