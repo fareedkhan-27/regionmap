@@ -5,6 +5,7 @@ import WorldMap, { type WorldMapHandle } from "./WorldMap";
 import Legend from "./Legend";
 import CountrySelector from "./CountrySelector";
 import FlightInfo from "./FlightInfo";
+import QuickActions from "./QuickActions";
 import { useMapConfig } from "@/hooks/useMapConfig";
 import { exportMapAsImage, exportMapAsSvg } from "@/utils/exportImage";
 import { REGION_PRESETS } from "@/data/regionPresets";
@@ -14,6 +15,8 @@ import { COUNTRY_ALIASES, getCountryByISO2 } from "@/data/countryAliases";
 import { hasCentroid, getCountryCentroid } from "@/utils/countryCentroids";
 import { FLIGHT_THEMES } from "@/data/flightThemes";
 import { VALID_FLIGHT_COUNTRIES, getTwoRandomFlightCountries, isValidFlightCountry } from "@/data/validFlightCountries";
+import { getNeighborCountries, getInverseSelection } from "@/utils/smartSelection";
+import { getCountriesInContinent, type Continent } from "@/data/countryContinents";
 import packageJson from "../../package.json";
 
 type MobileTab = "select" | "style" | "export";
@@ -26,6 +29,7 @@ export default function MapApp() {
     addGroup: addGroupToConfig,
     removeGroup: removeGroupFromConfig,
     updateGroup,
+    setGroupCountries,
     setGroupCountriesFromInput,
     toggleCountryInGroup,
     setActiveGroup: setActiveGroupInConfig,
@@ -529,6 +533,42 @@ export default function MapApp() {
     // This can be used for additional effects if needed
   }, []);
 
+  // Quick Actions handlers
+  const handleAddNeighbors = useCallback(() => {
+    const neighbors = getNeighborCountries(allSelectedCountries);
+    if (neighbors.length === 0) return;
+
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+
+    const currentGroup = config.groups.find(g => g.id === targetGroupId);
+    if (!currentGroup) return;
+
+    // Merge neighbors with existing countries (avoid duplicates)
+    const merged = [...new Set([...currentGroup.countries, ...neighbors])];
+    setGroupCountries(targetGroupId, merged);
+  }, [allSelectedCountries, activeGroupId, config.groups, setGroupCountries]);
+
+  const handleSelectContinent = useCallback((continent: Continent) => {
+    const countries = getCountriesInContinent(continent);
+    if (countries.length === 0) return;
+
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+
+    setGroupCountries(targetGroupId, countries);
+  }, [activeGroupId, setGroupCountries]);
+
+  const handleInverseSelection = useCallback(() => {
+    const inverse = getInverseSelection(allSelectedCountries);
+    if (inverse.length === 0) return;
+
+    const targetGroupId = activeGroupId || config.groups[0]?.id;
+    if (!targetGroupId) return;
+
+    setGroupCountries(targetGroupId, inverse);
+  }, [allSelectedCountries, activeGroupId, setGroupCountries]);
+
   // Mobile bottom sheet content
   const renderMobileContent = () => {
     switch (mobileTab) {
@@ -608,6 +648,14 @@ export default function MapApp() {
                 )}
               </div>
             </div>
+
+            {/* Quick Actions */}
+            <QuickActions
+              selectedCountries={allSelectedCountries}
+              onAddNeighbors={handleAddNeighbors}
+              onSelectContinent={handleSelectContinent}
+              onInverseSelection={handleInverseSelection}
+            />
 
             {/* Single Mode: Simple Input */}
             {config.mode === "single" && (
@@ -1304,6 +1352,14 @@ export default function MapApp() {
                   )}
                 </div>
               </div>
+
+              {/* Quick Actions */}
+              <QuickActions
+                selectedCountries={allSelectedCountries}
+                onAddNeighbors={handleAddNeighbors}
+                onSelectContinent={handleSelectContinent}
+                onInverseSelection={handleInverseSelection}
+              />
 
               {/* Single Mode: Simple Country Input */}
               {config.mode === "single" && (

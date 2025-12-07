@@ -8,6 +8,7 @@ import GroupsPanel from "./GroupsPanel";
 import ExportPanel from "./ExportPanel";
 import CountrySelector from "./CountrySelector";
 import FlightInfo from "./FlightInfo";
+import QuickActions from "./QuickActions";
 import { FLIGHT_THEMES } from "@/data/flightThemes";
 
 interface ControlsPanelProps {
@@ -62,6 +63,10 @@ interface ControlsPanelProps {
   onPlayFlight?: () => void;
   onStopFlight?: () => void;
   onSurpriseMe?: () => void;
+  // Quick Actions
+  onAddNeighbors?: () => void;
+  onSelectContinent?: (continent: string) => void;
+  onInverseSelection?: () => void;
 }
 
 type Section = "selection" | "appearance" | "export" | "flight";
@@ -104,6 +109,9 @@ export default function ControlsPanel({
   onPlayFlight,
   onStopFlight,
   onSurpriseMe,
+  onAddNeighbors,
+  onSelectContinent,
+  onInverseSelection,
 }: ControlsPanelProps) {
   const [activeSection, setActiveSection] = useState<Section>("selection");
   const [singleInput, setSingleInput] = useState("");
@@ -230,6 +238,16 @@ export default function ControlsPanel({
 
             {/* Presets */}
             <PresetsBar onSelectPreset={onApplyPreset} onClear={onClearAll} />
+
+            {/* Quick Actions */}
+            {onAddNeighbors && onSelectContinent && onInverseSelection && (
+              <QuickActions
+                selectedCountries={selectedCountries}
+                onAddNeighbors={onAddNeighbors}
+                onSelectContinent={onSelectContinent}
+                onInverseSelection={onInverseSelection}
+              />
+            )}
 
             {/* Single Mode Input */}
             {mode === "single" && groups.length > 0 && (
