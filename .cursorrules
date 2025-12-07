@@ -1,0 +1,154 @@
+# Cursor Project Rules – REGION-MAP-GENERATOR (coolmap.io)
+
+You are working on a responsive Next.js 14 (App Router) app for creating custom world maps with highlighted regions.
+
+## Tech Stack
+
+- Next.js 14 with TypeScript (app directory)
+- React 18
+- D3.js for map rendering (d3-geo, d3-zoom)
+- TopoJSON (world-atlas) for geographic data
+- Tailwind CSS for styling
+- State managed via a single custom hook `useMapConfig`
+
+When editing code, prefer **small, focused changes** that respect the existing architecture and patterns described below.
+
+---
+
+## Core Architecture
+
+### 1. State Management – `useMapConfig`
+
+- File: `src/hooks/useMapConfig.ts`
+- This is the **single source of truth** for map configuration.
+- Responsibilities:
+  - Tracks mode (`"single"` or `"multi"`)
+  - Manages groups (id, name, color, selected country ISO2 codes)
+  - Provides computed values:
+    - `countryColorMap`
+    - `allSelectedCountries`
+  - Exposes update functions (add/remove countries, change mode, manage groups, etc.)
+
+**Rule:**  
+All feature state (including new features like Flight Mode) must be driven from this hook or a similarly central config hook, not scattered across components.
+
+### 2. Modes
+
+Type: `Mode` in `src/types/map.ts`
+
+- **Single Mode (`"single"`)**  
+  - One group, one color  
+  - Presets **replace** current selection
+
+- **Multi Group Mode (`"multi"`)**  
+  - Multiple color groups  
+  - One **active group** at a time  
+  - Presets **add to the active group**
+
+**Rule:**  
+When changing modes, always use `setMode()` from `useMapConfig`. Don’t mutate `config.mode` directly.
+
+### 3. Country Handling
+
+- Internally we use **ISO2 country codes** (e.g. `"US"`, `"AE"`, `"IN"`).
+- Parsing logic:
+  - `parseCountryInput()` → validates/free-text parsing
+  - `resolveCountryToken()` → resolves to ISO2
+- Data lives in `src/data/countryAliases.ts`
+- Display names are resolved via `getCountryByISO2()`.
+
+**Rule:**  
+All new features that work with countries must use ISO2 codes and the existing parsing/mapping utilities. Don’t introduce parallel country formats.
+
+### 4. D3 Map Rendering
+
+- File: `src/components/WorldMap.tsx`
+- Uses:
+  - `d3.geoNaturalEarth1()` projection
+  - `d3.zoom()` for pan/zoom
+  - TopoJSON from `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json`
+- Exposes methods via ref:
+  - `getSvgElement()`
+  - `zoomToSelection()`
+  - `resetZoom()`
+
+**Rule:**  
+When adding visual features (e.g. Flight Mode animation, route overlays), extend `WorldMap` in a way that:
+- Keeps the existing zoom/pan behavior intact
+- Uses the same projection utilities in `src/utils/worldMap.ts`
+- Adds new layers (paths, markers, animations) on top of the existing country paths, rather than rewriting the core logic.
+
+### 5. Export / Image Generation
+
+- Export logic: `src/utils/exportImage.ts`
+- Pipeline:
+  - `<WorldMap />` exposes SVG → SVG cloned/scaled → Canvas → PNG/JPG
+  - Resolution presets: `RESOLUTION_DIMENSIONS` in `src/types/map.ts`
+- UI: `src/components/ExportPanel.tsx`
+
+**Rule:**  
+If a new visual feature (e.g. flight path, plane icon) should appear in the export, ensure it is rendered inside the SVG that `getSvgElement()` returns.
+
+---
+
+## File Layout (High Level)
+
+- `src/app/layout.tsx` – root layout
+- `src/app/page.tsx` – renders `<MapApp />`
+- `src/components/MapApp.tsx` – orchestrator, owns `useMapConfig`
+- `src/components/WorldMap.tsx` – D3 SVG map
+- `src/components/ControlsPanel.tsx` – mode, input, presets UI
+- `src/components/GroupsPanel.tsx` – multi-group management
+- `src/components/ExportPanel.tsx` – export settings
+- `src/components/Legend.tsx` – color legend
+- `src/data/countryAliases.ts` – country/ISO data
+- `src/data/regionPresets.ts` – presets (MEA, EU, GCC, etc.)
+- `src/utils/parseCountryInput.ts` – parsing logic
+- `src/utils/worldMap.ts` – projection + bounding-box utilities
+- `src/utils/exportImage.ts` – canvas/export helpers
+- `src/types/map.ts` – shared types, enums, constants
+
+When adding new files, align them with this structure.
+
+---
+
+## Styling & UX Rules
+
+- Use Tailwind classes defined via `tailwind.config.ts`.
+- Respect dark mode (`class="dark"`) and existing color tokens:
+  - `cream` for light backgrounds
+  - `ink` for dark backgrounds
+  - `accent.*` for highlights
+- Keep UIs minimal and focused — this is a **utility mapping tool**, not a dashboard.
+
+---
+
+## Working With Flight Mode (New Feature)
+
+**Concept:** Flight Mode is an animation / route overlay between origin and destination countries on the same world map.
+
+When modifying or extending Flight Mode:
+
+1. Represent state in `useMapConfig` or a dedicated hook in `src/hooks`:
+   - Use types defined or extended in `src/types/map.ts`
+   - Store country references as ISO2 codes
+2. Expose Flight Mode state + actions via `MapApp` to child components.
+3. Implement visuals in `WorldMap.tsx`:
+   - Draw route paths and plane markers using D3/SVG on top of country paths.
+   - Reuse projection utilities from `src/utils/worldMap.ts`.
+4. Ensure:
+   - Flight Mode can be toggled on/off.
+   - Performance remains acceptable (no unnecessary re-renders).
+   - Export still works (flight path appears in exported images when enabled).
+
+---
+
+## General Rules For Cursor
+
+- Before significant edits, **skim `CLAUDE.md` and `README.md`** for context.
+- Prefer incremental refactors, not full rewrites.
+- Keep TypeScript types in sync when you add/change props or config.
+- After changes, run:
+  - `npm run lint`
+  - `npm run build` (if changes are large)
+- Preserve comments and architectural intentions from existing code.
