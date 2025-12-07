@@ -68,6 +68,7 @@ export default function MapApp() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("select");
   const [showCountryLabels, setShowCountryLabels] = useState(false);
   const [mapDimensions, setMapDimensions] = useState({ width: 960, height: 540 });
+  const [isFlightMode, setIsFlightMode] = useState(false); // Mobile-only flight-focused mode
   
   // Input states - LOCAL state, completely managed here
   const [countryInput, setCountryInput] = useState("");
@@ -100,7 +101,8 @@ export default function MapApp() {
       const container = document.getElementById("map-container");
       if (container) {
         const rect = container.getBoundingClientRect();
-        const padding = isMobile ? 16 : 32;
+        // In flight mode on mobile, use minimal padding for maximum space
+        const padding = (isMobile && isFlightMode) ? 8 : (isMobile ? 16 : 32);
         const width = Math.max(rect.width - padding, 300);
         const height = Math.max(rect.height - padding, 200);
         setMapDimensions({ width, height });
@@ -114,7 +116,17 @@ export default function MapApp() {
       clearTimeout(timer);
       window.removeEventListener("resize", updateDimensions);
     };
-  }, [isMobile, showMobilePanel]);
+  }, [isMobile, showMobilePanel, isFlightMode]);
+
+  // Auto-enter flight mode on mobile when flight animation is enabled
+  useEffect(() => {
+    if (isMobile && enableFlightAnimation && !isFlightMode) {
+      setIsFlightMode(true);
+      setShowMobilePanel(false); // Close any open panels
+    } else if (isMobile && !enableFlightAnimation && isFlightMode) {
+      setIsFlightMode(false);
+    }
+  }, [isMobile, enableFlightAnimation, isFlightMode]);
 
   // Dark mode toggle
   useEffect(() => {
@@ -1696,8 +1708,8 @@ export default function MapApp() {
 
         {/* Map Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile: Status bar */}
-          {isMobile && (
+          {/* Mobile: Status bar - hidden in flight mode */}
+          {isMobile && !isFlightMode && (
             <div className="flex-shrink-0 px-3 py-2 bg-cream-50/95 dark:bg-ink-900/95 border-b border-cream-200 dark:border-ink-800 flex items-center justify-between">
               <div className="text-xs text-ink-500 dark:text-ink-400">
                 {hasSelection ? (
@@ -1729,8 +1741,8 @@ export default function MapApp() {
           {/* Map container */}
           <div
             id="map-container"
-            className={`flex-1 relative overflow-hidden flex items-center justify-center ${
-              isMobile ? "p-2" : "p-4"
+            className={`flex-1 relative overflow-hidden flex items-center justify-center transition-all duration-300 ${
+              isMobile && isFlightMode ? "p-1" : isMobile ? "p-2" : "p-4"
             }`}
           >
             <WorldMap
@@ -1754,8 +1766,8 @@ export default function MapApp() {
               className="rounded-lg shadow-lg"
             />
 
-            {/* Legend - positioned carefully */}
-            {hasSelection && (
+            {/* Legend - positioned carefully, hidden in flight mode on mobile */}
+            {hasSelection && !(isMobile && isFlightMode) && (
               <Legend
                 groups={config.groups}
                 mode={config.mode}
@@ -1765,7 +1777,7 @@ export default function MapApp() {
             )}
 
             {/* Mobile Floating Controls - Top Right */}
-            {isMobile && (
+            {isMobile && !isFlightMode && (
               <div className="absolute top-2 right-2 flex flex-col gap-2">
                 {/* Zoom Reset */}
                 <button
@@ -1794,12 +1806,170 @@ export default function MapApp() {
                 </button>
               </div>
             )}
+
+            {/* Mobile Flight Mode Controls Overlay */}
+            {isMobile && isFlightMode && (
+              <div className="absolute inset-0 pointer-events-none z-10">
+                {/* Back to Editing Button - Top Left */}
+                <div className="absolute top-2 left-2 pointer-events-auto">
+                  <button
+                    onClick={() => {
+                      setIsFlightMode(false);
+                      setEnableFlightAnimation(false);
+                    }}
+                    className="px-3 py-2 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-700 dark:text-ink-200 text-sm font-medium flex items-center gap-2 hover:bg-cream-100 dark:hover:bg-ink-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Editing
+                  </button>
+                </div>
+
+                {/* Flight Controls - Bottom Center (compact) */}
+                <div className="absolute bottom-2 left-2 right-2 pointer-events-auto">
+                  <div className="bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 p-3 space-y-2 max-h-[50vh] overflow-y-auto">
+                    {/* Origin & Destination - Compact */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-1">
+                          Origin
+                        </label>
+                        <CountrySelector
+                          value={flightOrigin}
+                          onChange={handleFlightOriginChange}
+                          placeholder="Origin..."
+                          disabled={isFlightPlaying}
+                          flightOnly={true}
+                          className="text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-1">
+                          Destination
+                        </label>
+                        <CountrySelector
+                          value={flightDestination}
+                          onChange={handleFlightDestinationChange}
+                          placeholder="Dest..."
+                          disabled={isFlightPlaying}
+                          flightOnly={true}
+                          className="text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Theme & Duration - Compact Row */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-1">
+                          Theme
+                        </label>
+                        <div className="grid grid-cols-3 gap-1">
+                          {Object.values(FLIGHT_THEMES).map((theme) => (
+                            <button
+                              key={theme.id}
+                              type="button"
+                              onClick={() => setFlightTheme(theme.id)}
+                              disabled={isFlightPlaying}
+                              className={`
+                                py-1 px-1.5 text-[10px] font-medium rounded transition-colors
+                                ${
+                                  flightTheme === theme.id
+                                    ? "bg-accent-teal text-white"
+                                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                                }
+                                disabled:opacity-50
+                              `}
+                            >
+                              {theme.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-1">
+                          Duration: {flightDurationMs / 1000}s
+                        </label>
+                        <input
+                          type="range"
+                          min="3000"
+                          max="10000"
+                          step="500"
+                          value={flightDurationMs}
+                          onChange={(e) => setFlightDurationMs(Number(e.target.value))}
+                          disabled={isFlightPlaying}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Play/Stop & Surprise Me - Compact */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePlayFlight}
+                        disabled={!flightOrigin || !flightDestination || isFlightPlaying}
+                        className="flex-1 py-2 text-xs font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        {isFlightPlaying ? (
+                          <>
+                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Flying...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Play
+                          </>
+                        )}
+                      </button>
+                      {isFlightPlaying && (
+                        <button
+                          onClick={handleStopFlight}
+                          className="px-3 py-2 text-xs font-semibold bg-accent-coral text-white rounded-lg hover:bg-accent-coral/90 transition-colors flex items-center justify-center"
+                          title="Stop Flight"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSurpriseMe}
+                        disabled={isFlightPlaying}
+                        className="px-3 py-2 text-xs font-medium bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 rounded-lg hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 transition-colors flex items-center justify-center"
+                        title="Surprise Me"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Flight Info - Compact */}
+                    {flightOrigin && flightDestination && (
+                      <FlightInfo
+                        origin={flightOrigin}
+                        destination={flightDestination}
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      {/* Mobile: Bottom Navigation */}
-      {isMobile && (
+      {/* Mobile: Bottom Navigation - hidden in flight mode */}
+      {isMobile && !isFlightMode && (
         <>
           {/* Bottom Sheet - positioned above the nav bar */}
           <div

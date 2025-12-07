@@ -44,22 +44,22 @@ export default function FlightInfo({
 
   return (
     <div
-      className={`p-3 bg-cream-100 dark:bg-ink-800 rounded-lg border border-cream-300 dark:border-ink-700 ${className}`}
+      className={`p-2 bg-cream-100 dark:bg-ink-800 rounded-lg border border-cream-300 dark:border-ink-700 ${className}`}
     >
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+          <span className="text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
             Distance
           </span>
-          <span className="text-sm font-semibold text-ink-800 dark:text-ink-200">
+          <span className="text-xs font-semibold text-ink-800 dark:text-ink-200">
             {formatDistance(distance)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+          <span className="text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
             Est. Flight Time
           </span>
-          <span className="text-sm font-semibold text-ink-800 dark:text-ink-200">
+          <span className="text-xs font-semibold text-ink-800 dark:text-ink-200">
             {formatFlightTime(flightTime!)}
           </span>
         </div>
