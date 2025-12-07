@@ -6,6 +6,9 @@ import { formatCountryList } from "@/utils/parseCountryInput";
 import PresetsBar from "./PresetsBar";
 import GroupsPanel from "./GroupsPanel";
 import ExportPanel from "./ExportPanel";
+import CountrySelector from "./CountrySelector";
+import FlightInfo from "./FlightInfo";
+import { FLIGHT_THEMES } from "@/data/flightThemes";
 
 interface ControlsPanelProps {
   // Mode
@@ -44,9 +47,24 @@ interface ControlsPanelProps {
   // Selection info
   selectedCountries: CountryCode[];
   className?: string;
+  // Flight controls
+  enableFlightAnimation?: boolean;
+  onToggleFlightAnimation?: (enabled: boolean) => void;
+  flightOrigin?: CountryCode | null;
+  flightDestination?: CountryCode | null;
+  onFlightOriginChange?: (code: CountryCode | null) => void;
+  onFlightDestinationChange?: (code: CountryCode | null) => void;
+  flightTheme?: string;
+  onFlightThemeChange?: (theme: string) => void;
+  flightDurationMs?: number;
+  onFlightDurationChange?: (ms: number) => void;
+  isFlightPlaying?: boolean;
+  onPlayFlight?: () => void;
+  onStopFlight?: () => void;
+  onSurpriseMe?: () => void;
 }
 
-type Section = "selection" | "appearance" | "export";
+type Section = "selection" | "appearance" | "export" | "flight";
 
 export default function ControlsPanel({
   mode,
@@ -72,6 +90,20 @@ export default function ControlsPanel({
   isExporting = false,
   selectedCountries,
   className = "",
+  enableFlightAnimation = false,
+  onToggleFlightAnimation,
+  flightOrigin,
+  flightDestination,
+  onFlightOriginChange,
+  onFlightDestinationChange,
+  flightTheme = "classic",
+  onFlightThemeChange,
+  flightDurationMs = 5000,
+  onFlightDurationChange,
+  isFlightPlaying = false,
+  onPlayFlight,
+  onStopFlight,
+  onSurpriseMe,
 }: ControlsPanelProps) {
   const [activeSection, setActiveSection] = useState<Section>("selection");
   const [singleInput, setSingleInput] = useState("");
@@ -106,6 +138,15 @@ export default function ControlsPanel({
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+      ),
+    },
+    {
+      id: "flight",
+      label: "Flight",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
         </svg>
       ),
     },
@@ -351,6 +392,177 @@ export default function ControlsPanel({
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Flight Section */}
+        {activeSection === "flight" && (
+          <div className="space-y-4">
+            {/* Enable Flight Animation Toggle */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={enableFlightAnimation}
+                  onChange={(e) => onToggleFlightAnimation?.(e.target.checked)}
+                  className="w-4 h-4 rounded border-cream-300 dark:border-ink-600 text-accent-teal focus:ring-accent-teal"
+                />
+                <span className="text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+                  Enable Flight Animation
+                </span>
+              </label>
+            </div>
+
+            {enableFlightAnimation && (
+              <>
+                {/* Origin Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+                    Origin
+                  </label>
+                  <CountrySelector
+                    value={flightOrigin || null}
+                    onChange={onFlightOriginChange || (() => {})}
+                    placeholder="Select origin country..."
+                    disabled={isFlightPlaying}
+                    flightOnly={true}
+                  />
+                </div>
+
+                {/* Destination Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+                    Destination
+                  </label>
+                  <CountrySelector
+                    value={flightDestination || null}
+                    onChange={onFlightDestinationChange || (() => {})}
+                    placeholder="Select destination country..."
+                    disabled={isFlightPlaying}
+                    flightOnly={true}
+                  />
+                </div>
+
+                {/* Theme Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+                    Theme
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.values(FLIGHT_THEMES).map((theme) => (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => onFlightThemeChange?.(theme.id)}
+                        disabled={isFlightPlaying}
+                        className={`
+                          py-2 px-3 text-xs font-medium rounded-md transition-colors
+                          ${
+                            flightTheme === theme.id
+                              ? "bg-accent-teal text-white"
+                              : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                          }
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                        `}
+                      >
+                        {theme.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Duration Slider */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+                    Duration: {flightDurationMs ? flightDurationMs / 1000 : 5}s
+                  </label>
+                  <input
+                    type="range"
+                    min="3000"
+                    max="10000"
+                    step="500"
+                    value={flightDurationMs || 5000}
+                    onChange={(e) => onFlightDurationChange?.(Number(e.target.value))}
+                    disabled={isFlightPlaying}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Play Flight Button */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onPlayFlight}
+                    disabled={!flightOrigin || !flightDestination || isFlightPlaying}
+                    className="
+                      flex-1 py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg
+                      hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors flex items-center justify-center gap-2
+                    "
+                  >
+                    {isFlightPlaying ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Flying...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Play Flight
+                      </>
+                    )}
+                  </button>
+                  {isFlightPlaying && onStopFlight && (
+                    <button
+                      type="button"
+                      onClick={onStopFlight}
+                      className="
+                        px-4 py-3 text-sm font-semibold bg-accent-coral text-white rounded-lg
+                        hover:bg-accent-coral/90 transition-colors flex items-center justify-center
+                      "
+                      title="Stop Flight"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Surprise Me Button */}
+                <button
+                  type="button"
+                  onClick={onSurpriseMe}
+                  disabled={isFlightPlaying}
+                  className="
+                    w-full py-2 text-sm font-medium bg-cream-200 dark:bg-ink-700
+                    text-ink-600 dark:text-ink-300 rounded-lg
+                    hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50
+                    disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2
+                  "
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Surprise Me
+                </button>
+
+                {/* Flight Distance & Time Info */}
+                {flightOrigin && flightDestination && (
+                  <FlightInfo
+                    origin={flightOrigin}
+                    destination={flightDestination}
+                    className="mt-3"
+                  />
+                )}
+              </>
+            )}
           </div>
         )}
 

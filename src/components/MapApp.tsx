@@ -3,11 +3,17 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import WorldMap, { type WorldMapHandle } from "./WorldMap";
 import Legend from "./Legend";
+import CountrySelector from "./CountrySelector";
+import FlightInfo from "./FlightInfo";
 import { useMapConfig } from "@/hooks/useMapConfig";
 import { exportMapAsImage, exportMapAsSvg } from "@/utils/exportImage";
 import { REGION_PRESETS } from "@/data/regionPresets";
 import { formatCountryList, parseCountryInput } from "@/utils/parseCountryInput";
-import type { ResolutionOption } from "@/types/map";
+import type { ResolutionOption, CountryCode } from "@/types/map";
+import { COUNTRY_ALIASES, getCountryByISO2 } from "@/data/countryAliases";
+import { hasCentroid, getCountryCentroid } from "@/utils/countryCentroids";
+import { FLIGHT_THEMES } from "@/data/flightThemes";
+import { VALID_FLIGHT_COUNTRIES, getTwoRandomFlightCountries, isValidFlightCountry } from "@/data/validFlightCountries";
 import packageJson from "../../package.json";
 
 type MobileTab = "select" | "style" | "export";
@@ -69,6 +75,14 @@ export default function MapApp() {
   const [groupInputs, setGroupInputs] = useState<Record<string, string>>({ "group-1": "" });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Flight animation state
+  const [flightOrigin, setFlightOrigin] = useState<CountryCode | null>(null);
+  const [flightDestination, setFlightDestination] = useState<CountryCode | null>(null);
+  const [isFlightPlaying, setIsFlightPlaying] = useState(false);
+  const [flightDurationMs, setFlightDurationMs] = useState(5000);
+  const [enableFlightAnimation, setEnableFlightAnimation] = useState(false);
+  const [flightTheme, setFlightTheme] = useState<string>("classic");
 
   // Check for mobile viewport
   useEffect(() => {
@@ -418,6 +432,91 @@ export default function MapApp() {
     setValidationErrors([]);
   }, [clearAllCountries, config.groups]);
 
+  // Flight animation handlers
+  const handleFlightOriginChange = useCallback((countryCode: CountryCode | null) => {
+    setFlightOrigin(countryCode);
+  }, []);
+
+  const handleFlightDestinationChange = useCallback((countryCode: CountryCode | null) => {
+    setFlightDestination(countryCode);
+  }, []);
+
+  const handlePlayFlight = useCallback(() => {
+    if (flightOrigin && flightDestination && !isFlightPlaying) {
+      // Prevent playing if origin and destination are the same
+      if (flightOrigin === flightDestination) {
+        return;
+      }
+      
+      // Verify both countries are valid for flight
+      if (!isValidFlightCountry(flightOrigin) || !isValidFlightCountry(flightDestination)) {
+        console.warn("Invalid flight countries selected:", { flightOrigin, flightDestination });
+        setIsFlightPlaying(false);
+        return;
+      }
+      
+      setIsFlightPlaying(true);
+    }
+  }, [flightOrigin, flightDestination, isFlightPlaying]);
+
+  const handleStopFlight = useCallback(() => {
+    setIsFlightPlaying(false);
+    // Reset zoom immediately
+    setTimeout(() => {
+      mapRef.current?.resetZoom();
+    }, 100);
+  }, []);
+
+  const handleSurpriseMe = useCallback(() => {
+    if (isFlightPlaying) return;
+
+    // Use the single source of truth for valid flight countries
+    const randomPair = getTwoRandomFlightCountries();
+    
+    if (!randomPair) {
+      console.warn("Not enough valid flight countries available");
+      return;
+    }
+
+    const { origin, destination } = randomPair;
+
+    // Verify both have centroids before setting
+    if (!hasCentroid(origin) || !hasCentroid(destination)) {
+      console.warn("Selected countries missing centroids:", { origin, destination });
+      setIsFlightPlaying(false);
+      return;
+    }
+
+    setFlightOrigin(origin);
+    setFlightDestination(destination);
+
+    // Verify centroids can be projected before auto-playing
+    // We'll do a quick check - if projection fails, don't start flight
+    // The actual projection check happens in WorldMap, but we can prevent stuck state here
+    setTimeout(() => {
+      // Only start if we have valid countries
+      if (isValidFlightCountry(origin) && isValidFlightCountry(destination)) {
+        setIsFlightPlaying(true);
+      } else {
+        console.warn("Invalid countries selected, not starting flight");
+        setIsFlightPlaying(false);
+      }
+    }, 200);
+  }, [isFlightPlaying]);
+
+  const handleFlightComplete = useCallback(() => {
+    setIsFlightPlaying(false);
+    // Reset zoom after flight completes for better UX
+    setTimeout(() => {
+      mapRef.current?.resetZoom();
+    }, 500);
+  }, []);
+
+  const handleFlightProgress = useCallback((progress: number, planePosition: { x: number; y: number }) => {
+    // Progress callback is handled in WorldMap for zoom animation
+    // This can be used for additional effects if needed
+  }, []);
+
   // Mobile bottom sheet content
   const renderMobileContent = () => {
     switch (mobileTab) {
@@ -650,6 +749,126 @@ export default function MapApp() {
                 </div>
               </>
             )}
+
+            {/* Flight Animation Section */}
+            <div className="pt-4 border-t border-cream-200 dark:border-ink-700">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider">
+                  Flight Animation
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableFlightAnimation}
+                    onChange={(e) => setEnableFlightAnimation(e.target.checked)}
+                    className="w-4 h-4 rounded border-cream-300 dark:border-ink-600 text-accent-teal focus:ring-accent-teal"
+                  />
+                  <span className="text-xs text-ink-600 dark:text-ink-400">Enable</span>
+                </label>
+              </div>
+
+              {enableFlightAnimation && (
+                <div className="space-y-3">
+                  <CountrySelector
+                    value={flightOrigin}
+                    onChange={handleFlightOriginChange}
+                    label="Origin"
+                    disabled={isFlightPlaying}
+                    flightOnly={true}
+                  />
+                  <CountrySelector
+                    value={flightDestination}
+                    onChange={handleFlightDestinationChange}
+                    label="Destination"
+                    disabled={isFlightPlaying}
+                    flightOnly={true}
+                  />
+                  <div>
+                    <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-2">
+                      Theme
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.values(FLIGHT_THEMES).map((theme) => (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => setFlightTheme(theme.id)}
+                          disabled={isFlightPlaying}
+                          className={`
+                            py-2 px-3 text-xs font-medium rounded-md transition-colors
+                            ${
+                              flightTheme === theme.id
+                                ? "bg-accent-teal text-white"
+                                : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                            }
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          `}
+                        >
+                          {theme.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-ink-600 dark:text-ink-400 mb-1">
+                      Duration: {flightDurationMs / 1000}s
+                    </label>
+                    <input
+                      type="range"
+                      min="3000"
+                      max="10000"
+                      step="500"
+                      value={flightDurationMs}
+                      onChange={(e) => setFlightDurationMs(Number(e.target.value))}
+                      disabled={isFlightPlaying}
+                      className="w-full"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePlayFlight}
+                    disabled={!flightOrigin || !flightDestination || isFlightPlaying}
+                    className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isFlightPlaying ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Flying...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Play Flight
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleSurpriseMe}
+                    disabled={isFlightPlaying}
+                    className="w-full py-2 text-sm font-medium bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 rounded-lg hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    Surprise Me
+                  </button>
+                  
+                  {/* Flight Distance & Time Info */}
+                  {flightOrigin && flightDestination && (
+                    <FlightInfo
+                      origin={flightOrigin}
+                      destination={flightDestination}
+                      className="mt-3"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -1334,6 +1553,143 @@ export default function MapApp() {
                   </div>
                 </div>
               </div>
+
+              <hr className="border-cream-300 dark:border-ink-700" />
+
+              {/* Flight Animation */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider">
+                    Flight Animation
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableFlightAnimation}
+                      onChange={(e) => setEnableFlightAnimation(e.target.checked)}
+                      className="w-4 h-4 rounded border-cream-300 dark:border-ink-600 text-accent-teal focus:ring-accent-teal"
+                    />
+                    <span className="text-xs text-ink-600 dark:text-ink-400">Enable</span>
+                  </label>
+                </div>
+
+                {enableFlightAnimation && (
+                  <div className="space-y-3">
+                    <CountrySelector
+                      value={flightOrigin}
+                      onChange={handleFlightOriginChange}
+                      label="Origin"
+                      disabled={isFlightPlaying}
+                      className="mb-2"
+                      flightOnly={true}
+                    />
+                    <CountrySelector
+                      value={flightDestination}
+                      onChange={handleFlightDestinationChange}
+                      label="Destination"
+                      disabled={isFlightPlaying}
+                      className="mb-2"
+                      flightOnly={true}
+                    />
+                    <div>
+                      <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-2">
+                        Theme
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {Object.values(FLIGHT_THEMES).map((theme) => (
+                          <button
+                            key={theme.id}
+                            type="button"
+                            onClick={() => setFlightTheme(theme.id)}
+                            disabled={isFlightPlaying}
+                            className={`
+                              py-2 px-2 text-xs font-medium rounded-md transition-colors
+                              ${
+                                flightTheme === theme.id
+                                  ? "bg-accent-teal text-white"
+                                  : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                              }
+                              disabled:opacity-50 disabled:cursor-not-allowed
+                            `}
+                          >
+                            {theme.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink-600 dark:text-ink-400 mb-1">
+                        Duration: {flightDurationMs / 1000}s
+                      </label>
+                      <input
+                        type="range"
+                        min="3000"
+                        max="10000"
+                        step="500"
+                        value={flightDurationMs}
+                        onChange={(e) => setFlightDurationMs(Number(e.target.value))}
+                        disabled={isFlightPlaying}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePlayFlight}
+                        disabled={!flightOrigin || !flightDestination || isFlightPlaying}
+                        className="flex-1 py-2.5 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      >
+                        {isFlightPlaying ? (
+                          <>
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Flying...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Play Flight
+                          </>
+                        )}
+                      </button>
+                      {isFlightPlaying && (
+                        <button
+                          onClick={handleStopFlight}
+                          className="px-4 py-2.5 text-sm font-semibold bg-accent-coral text-white rounded-lg hover:bg-accent-coral/90 transition-colors flex items-center justify-center"
+                          title="Stop Flight"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSurpriseMe}
+                      disabled={isFlightPlaying}
+                      className="w-full py-2 text-sm font-medium bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 rounded-lg hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                      Surprise Me
+                    </button>
+                    
+                    {/* Flight Distance & Time Info */}
+                    {flightOrigin && flightDestination && (
+                      <FlightInfo
+                        origin={flightOrigin}
+                        destination={flightDestination}
+                        className="mt-3"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </aside>
         )}
@@ -1387,6 +1743,14 @@ export default function MapApp() {
               isDarkMode={isDarkMode}
               showLabels={showCountryLabels}
               onCountryClick={handleCountryClick}
+              flightOrigin={enableFlightAnimation ? flightOrigin : null}
+              flightDestination={enableFlightAnimation ? flightDestination : null}
+              isFlightPlaying={isFlightPlaying}
+              flightDurationMs={flightDurationMs}
+              onFlightComplete={handleFlightComplete}
+              onFlightProgress={handleFlightProgress}
+              onFlightStop={handleStopFlight}
+              flightTheme={flightTheme}
               className="rounded-lg shadow-lg"
             />
 

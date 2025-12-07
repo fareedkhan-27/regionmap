@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useMemo,
   forwardRef,
   useImperativeHandle,
 } from "react";
@@ -20,6 +21,8 @@ import {
   getISO2FromFeatureId,
   createGraticule,
 } from "@/utils/worldMap";
+import { getCountryCentroid } from "@/utils/countryCentroids";
+import FlightPath from "./FlightPath";
 import type { CountryCode, MapConfig } from "@/types/map";
 
 interface CountryProperties {
@@ -36,6 +39,14 @@ interface WorldMapProps {
   isDarkMode?: boolean;
   showLabels?: boolean;
   onCountryClick?: (iso2: CountryCode) => void;
+  flightOrigin?: CountryCode | null;
+  flightDestination?: CountryCode | null;
+  isFlightPlaying?: boolean;
+  flightDurationMs?: number;
+  onFlightComplete?: () => void;
+  onFlightProgress?: (progress: number, planePosition: { x: number; y: number }) => void;
+  onFlightStop?: () => void;
+  flightTheme?: string;
 }
 
 export interface WorldMapHandle {
@@ -56,6 +67,14 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       isDarkMode = false,
       showLabels = false,
       onCountryClick,
+      flightOrigin,
+      flightDestination,
+      isFlightPlaying = false,
+      flightDurationMs = 5000,
+      onFlightComplete,
+      onFlightProgress,
+      onFlightStop,
+      flightTheme = "classic",
     },
     ref
   ) => {
@@ -121,16 +140,29 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([1, 8])
         .on("zoom", (event) => {
-          g.attr("transform", event.transform);
+          // Only allow manual zoom if not during flight
+          if (!isFlightPlaying) {
+            g.attr("transform", event.transform);
+          }
         });
 
       svg.call(zoom);
       zoomRef.current = zoom;
 
+      // Disable zoom/pan interactions during flight animation
+      if (isFlightPlaying) {
+        svg.on("wheel.zoom", null);
+        svg.on("mousedown.zoom", null);
+        svg.on("touchstart.zoom", null);
+        svg.style("cursor", "default");
+      } else {
+        svg.style("cursor", "grab");
+      }
+
       return () => {
         svg.on(".zoom", null);
       };
-    }, [geoData]);
+    }, [geoData, isFlightPlaying]);
 
     // Update projection when dimensions change
     useEffect(() => {
@@ -186,15 +218,87 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         .call(zoomRef.current.transform, d3.zoomIdentity);
     }, []);
 
-    // Auto-zoom when selection changes
+    // Auto-zoom when selection changes (but not during flight)
     useEffect(() => {
-      if (selectedCountries.length > 0) {
+      if (selectedCountries.length > 0 && !isFlightPlaying) {
         const timer = setTimeout(() => {
           zoomToSelectedCountries();
         }, 300);
         return () => clearTimeout(timer);
       }
-    }, [selectedCountries, zoomToSelectedCountries]);
+    }, [selectedCountries, zoomToSelectedCountries, isFlightPlaying]);
+
+    // Handle flight progress for cinematic zoom
+    const handleFlightProgress = useCallback((progress: number, planePosition: { x: number; y: number }) => {
+      if (!svgRef.current || !zoomRef.current || !projectionRef.current || !isFlightPlaying) return;
+
+      const svg = d3.select(svgRef.current);
+      let scale: number;
+      let translate: [number, number];
+
+      if (progress <= 0.2) {
+        // Takeoff phase: zoom in near origin (1.0 → 1.3)
+        const takeoffProgress = progress / 0.2;
+        scale = 1.0 + (0.3 * takeoffProgress);
+        
+        if (flightOrigin) {
+          const originCoords = getCountryCentroid(flightOrigin, projectionRef.current, width, height);
+          if (originCoords) {
+            translate = [
+              width / 2 - originCoords.x * scale,
+              height / 2 - originCoords.y * scale,
+            ];
+          } else {
+            translate = [0, 0];
+            scale = 1.0;
+          }
+        } else {
+          translate = [0, 0];
+          scale = 1.0;
+        }
+      } else if (progress <= 0.8) {
+        // Cruise phase: follow plane, zoom out (1.3 → 0.7)
+        const cruiseProgress = (progress - 0.2) / 0.6;
+        scale = 1.3 - (0.6 * cruiseProgress);
+        
+        // Center on plane position
+        translate = [
+          width / 2 - planePosition.x * scale,
+          height / 2 - planePosition.y * scale,
+        ];
+      } else {
+        // Landing phase: zoom in near destination (0.7 → 1.2)
+        const landingProgress = (progress - 0.8) / 0.2;
+        scale = 0.7 + (0.5 * landingProgress);
+        
+        if (flightDestination) {
+          const destCoords = getCountryCentroid(flightDestination, projectionRef.current, width, height);
+          if (destCoords) {
+            translate = [
+              width / 2 - destCoords.x * scale,
+              height / 2 - destCoords.y * scale,
+            ];
+          } else {
+            translate = [0, 0];
+            scale = 1.0;
+          }
+        } else {
+          translate = [0, 0];
+          scale = 1.0;
+        }
+      }
+
+      // Apply zoom transform directly (no transition for smooth frame-by-frame animation)
+      const transform = d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale);
+      if (zoomRef.current) {
+        svg.call(zoomRef.current.transform, transform);
+      }
+    }, [width, height, flightOrigin, flightDestination, isFlightPlaying]);
+
+    // Use provided progress handler or fallback to internal handler
+    const progressHandler = useMemo(() => {
+      return onFlightProgress || handleFlightProgress;
+    }, [onFlightProgress, handleFlightProgress]);
 
     // Theme colors
     const colors = {
@@ -411,6 +515,40 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
               </path>
             );
           })}
+
+          {/* Flight Path Animation */}
+          {flightOrigin && flightDestination && (() => {
+            const originCoords = getCountryCentroid(flightOrigin, projectionRef.current, width, height);
+            const destCoords = getCountryCentroid(flightDestination, projectionRef.current, width, height);
+            
+            // Defensive check: if centroids are missing, stop the flight
+            if (!originCoords || !destCoords) {
+              // If flight is playing but centroids are invalid, stop it
+              if (isFlightPlaying && onFlightStop) {
+                // Use setTimeout to avoid state updates during render
+                setTimeout(() => {
+                  onFlightStop();
+                }, 0);
+              }
+              return null;
+            }
+            
+            return (
+              <FlightPath
+                origin={originCoords}
+                destination={destCoords}
+                isPlaying={isFlightPlaying}
+                durationMs={flightDurationMs}
+                onComplete={onFlightComplete}
+                onProgress={progressHandler}
+                onStop={onFlightStop}
+                width={width}
+                height={height}
+                isDarkMode={isDarkMode}
+                themeId={flightTheme}
+              />
+            );
+          })()}
 
           {/* Country Labels - show for selected countries, or all if nothing selected */}
           {showLabels && geoData.features.map((feature: Feature<Geometry>) => {
