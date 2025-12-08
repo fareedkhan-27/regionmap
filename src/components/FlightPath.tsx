@@ -235,38 +235,57 @@ export default function FlightPath({
           style={{ pointerEvents: "none" }}
           filter="url(#planeShadow)"
         >
-          {/* Airplane SVG - centered at origin, nose pointing right (east) */}
-          {/* Fuselage */}
-          <ellipse cx="0" cy="0" rx="10" ry="2.5" fill={planeColor} />
+          {/* Airplane SVG - realistic commercial airliner design, nose pointing right (east) */}
           
-          {/* Main wings */}
+          {/* Main fuselage - streamlined body */}
+          <ellipse cx="0" cy="0" rx="8" ry="1.8" fill={planeColor} />
+          
+          {/* Nose cone - pointed front */}
           <path
-            d="M -6,-3 L 2,-2 L 2,2 L -6,3 Z"
+            d="M 8,0 L 9.5,-0.8 L 9.5,0.8 Z"
+            fill={planeColor}
+          />
+          
+          {/* Main wings - wider and more realistic */}
+          <path
+            d="M -5,-4 L -5,-3.5 L 3,-2.5 L 3,2.5 L -5,3.5 L -5,4 Z"
             fill={planeColor}
             opacity={0.95}
           />
           
-          {/* Tail fin */}
+          {/* Wing details - subtle separation */}
+          <line x1="-5" y1="-3.5" x2="3" y2="-2.5" stroke={planeStrokeColor} strokeWidth="0.3" opacity={0.4} />
+          <line x1="-5" y1="3.5" x2="3" y2="2.5" stroke={planeStrokeColor} strokeWidth="0.3" opacity={0.4} />
+          
+          {/* Tail fin - vertical stabilizer */}
           <path
-            d="M 8,0 L 10,-2.5 L 10,2.5 Z"
+            d="M -7,0 L -7.5,-2.5 L -6.5,-2.5 L -6.5,-1.5 L -6,-1.5 L -6,1.5 L -6.5,1.5 L -6.5,2.5 L -7.5,2.5 Z"
             fill={planeColor}
           />
           
-          {/* Horizontal stabilizer */}
+          {/* Horizontal stabilizer - tail wings */}
           <path
-            d="M 6,-1.5 L 9,-1 L 9,1 L 6,1.5 Z"
+            d="M -6.5,-1.2 L -7.5,-1.5 L -7.5,1.5 L -6.5,1.2 Z"
             fill={planeColor}
             opacity={0.9}
           />
           
-          {/* Cockpit window */}
-          <circle cx="-4" cy="0" r="1.2" fill="white" opacity={0.9} />
+          {/* Cockpit windows - multiple windows for realism */}
+          <circle cx="3" cy="0" r="0.8" fill="white" opacity={0.85} />
+          <circle cx="1.5" cy="0" r="0.7" fill="white" opacity={0.75} />
           
-          {/* Engine/nacelle */}
-          <ellipse cx="-2" cy="0" rx="1.5" ry="1" fill={planeStrokeColor} opacity={0.6} />
+          {/* Engine nacelles under wings */}
+          <ellipse cx="-2" cy="-3.2" rx="1.2" ry="0.8" fill={planeStrokeColor} opacity={0.7} />
+          <ellipse cx="-2" cy="3.2" rx="1.2" ry="0.8" fill={planeStrokeColor} opacity={0.7} />
           
           {/* Outline stroke for definition */}
-          <ellipse cx="0" cy="0" rx="10" ry="2.5" fill="none" stroke={planeStrokeColor} strokeWidth="0.5" />
+          <ellipse cx="0" cy="0" rx="8" ry="1.8" fill="none" stroke={planeStrokeColor} strokeWidth="0.4" />
+          <path
+            d="M 8,0 L 9.5,-0.8 L 9.5,0.8 Z"
+            fill="none"
+            stroke={planeStrokeColor}
+            strokeWidth="0.4"
+          />
         </g>
       )}
 
