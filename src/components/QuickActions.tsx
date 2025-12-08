@@ -3,7 +3,7 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import type { CountryCode } from "@/types/map";
 import { getAllContinents, getContinentFromSelection, type Continent } from "@/data/countryContinents";
 import { canAddNeighbors, canSelectContinent, canInverseSelection } from "@/utils/smartSelection";
@@ -16,7 +16,7 @@ interface QuickActionsProps {
   className?: string;
 }
 
-export default function QuickActions({
+const QuickActions = React.memo(function QuickActions({
   selectedCountries,
   onAddNeighbors,
   onSelectContinent,
@@ -26,11 +26,13 @@ export default function QuickActions({
   const [isContinentDropdownOpen, setIsContinentDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const continents = getAllContinents();
-  const hasSelection = selectedCountries.length > 0;
-  const canAdd = canAddNeighbors(selectedCountries);
-  const canContinent = canSelectContinent(selectedCountries);
-  const canInverse = canInverseSelection(selectedCountries);
-  const currentContinent = getContinentFromSelection(selectedCountries);
+  
+  // Memoize computed values
+  const hasSelection = useMemo(() => selectedCountries.length > 0, [selectedCountries.length]);
+  const canAdd = useMemo(() => canAddNeighbors(selectedCountries), [selectedCountries]);
+  const canContinent = useMemo(() => canSelectContinent(selectedCountries), [selectedCountries]);
+  const canInverse = useMemo(() => canInverseSelection(selectedCountries), [selectedCountries]);
+  const currentContinent = useMemo(() => getContinentFromSelection(selectedCountries), [selectedCountries]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -51,22 +53,22 @@ export default function QuickActions({
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+      <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
         Quick Actions
       </label>
       
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {/* Add Neighbors Button */}
         <button
           type="button"
           onClick={onAddNeighbors}
           disabled={!canAdd}
           className={`
-            w-full px-3 py-2 text-sm font-medium rounded-md transition-colors
+            w-full px-3 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
             flex items-center justify-center gap-2
             ${
               canAdd
-                ? "bg-accent-teal text-white hover:bg-accent-teal/90"
+                ? "bg-accent-teal text-white hover:bg-accent-teal/90 active:scale-[0.98] shadow-sm shadow-accent-teal/20"
                 : "bg-cream-200 dark:bg-ink-700 text-ink-400 dark:text-ink-500 cursor-not-allowed"
             }
           `}
@@ -85,11 +87,11 @@ export default function QuickActions({
             onClick={() => canContinent && setIsContinentDropdownOpen(!isContinentDropdownOpen)}
             disabled={!canContinent}
             className={`
-              w-full px-3 py-2 text-sm font-medium rounded-md transition-colors
+              w-full px-3 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
               flex items-center justify-between
               ${
                 canContinent
-                  ? "bg-cream-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-cream-300 dark:hover:bg-ink-600"
+                  ? "bg-cream-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
                   : "bg-cream-200 dark:bg-ink-700 text-ink-400 dark:text-ink-500 cursor-not-allowed"
               }
             `}
@@ -137,11 +139,11 @@ export default function QuickActions({
           onClick={onInverseSelection}
           disabled={!canInverse}
           className={`
-            w-full px-3 py-2 text-sm font-medium rounded-md transition-colors
+            w-full px-3 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
             flex items-center justify-center gap-2
             ${
               canInverse
-                ? "bg-accent-coral text-white hover:bg-accent-coral/90"
+                ? "bg-accent-coral text-white hover:bg-accent-coral/90 active:scale-[0.98] shadow-sm shadow-accent-coral/20"
                 : "bg-cream-200 dark:bg-ink-700 text-ink-400 dark:text-ink-500 cursor-not-allowed"
             }
           `}
@@ -155,11 +157,15 @@ export default function QuickActions({
       </div>
 
       {hasSelection && (
-        <div className="text-xs text-ink-500 dark:text-ink-400 pt-2 border-t border-cream-200 dark:border-ink-700">
+        <div className="text-xs text-ink-500 dark:text-ink-400 font-medium pt-2.5 border-t border-cream-200 dark:border-ink-700">
           {selectedCountries.length} {selectedCountries.length === 1 ? "country" : "countries"} selected
         </div>
       )}
     </div>
   );
-}
+});
+
+QuickActions.displayName = "QuickActions";
+
+export default QuickActions;
 

@@ -141,11 +141,34 @@
 @media (hover: none) and (pointer: coarse) {
   button, a {
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* Improve tap responsiveness */
   }
   
   input, textarea, select {
     font-size: 16px; /* Prevent iOS zoom on focus */
   }
+  
+  /* Improve scrolling performance */
+  .overflow-y-auto, .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  
+  /* Prevent text selection on buttons during tap */
+  button {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Touch manipulation utility class */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Pan-y for vertical scrolling areas */
+.touch-pan-y {
+  touch-action: pan-y;
 }
 
 /* Bottom sheet animation */

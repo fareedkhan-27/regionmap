@@ -33,10 +33,10 @@ export default function ExportPanel({
   className = "",
 }: ExportPanelProps) {
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-5 ${className}`}>
       {/* Title Section */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+      <div className="space-y-2.5">
+        <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
           Export Title
         </label>
         <input
@@ -45,13 +45,14 @@ export default function ExportPanel({
           onChange={(e) => onTitleChange({ title: e.target.value })}
           placeholder="Map title (optional)"
           className="
-            w-full px-3 py-2 text-sm
+            w-full px-3.5 py-2.5 text-sm
             bg-white dark:bg-ink-900
             border border-cream-300 dark:border-ink-600
-            rounded-md
-            focus:outline-none focus:ring-2 focus:ring-accent-teal
+            rounded-lg
+            focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
             text-ink-800 dark:text-ink-100
             placeholder:text-ink-400
+            transition-all duration-200
           "
         />
         <input
@@ -60,30 +61,31 @@ export default function ExportPanel({
           onChange={(e) => onTitleChange({ subtitle: e.target.value })}
           placeholder="Subtitle (optional)"
           className="
-            w-full px-3 py-2 text-sm
+            w-full px-3.5 py-2.5 text-sm
             bg-white dark:bg-ink-900
             border border-cream-300 dark:border-ink-600
-            rounded-md
-            focus:outline-none focus:ring-2 focus:ring-accent-teal
+            rounded-lg
+            focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
             text-ink-800 dark:text-ink-100
             placeholder:text-ink-400
+            transition-all duration-200
           "
         />
 
         {/* Title position */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           {(["top-left", "top-center", "hidden"] as const).map((pos) => (
             <button
               key={pos}
               type="button"
               onClick={() => onTitleChange({ position: pos })}
               className={`
-                flex-1 py-1.5 text-xs font-medium rounded-md
-                transition-colors
+                flex-1 py-2 text-xs font-medium rounded-lg
+                transition-all duration-200
                 ${
                   titleConfig.position === pos
-                    ? "bg-accent-teal text-white"
-                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                    ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
                 }
               `}
             >
@@ -93,7 +95,7 @@ export default function ExportPanel({
         </div>
 
         {/* Font options */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <select
             value={titleConfig.fontFamily}
             onChange={(e) =>
@@ -102,12 +104,13 @@ export default function ExportPanel({
               })
             }
             className="
-              flex-1 px-2 py-1.5 text-xs
+              flex-1 px-3 py-2.5 text-xs font-medium
               bg-white dark:bg-ink-900
               border border-cream-300 dark:border-ink-600
-              rounded-md
-              focus:outline-none focus:ring-2 focus:ring-accent-teal
+              rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
               text-ink-800 dark:text-ink-100
+              transition-all duration-200
             "
           >
             <option value="sans">Sans-serif</option>
@@ -122,12 +125,13 @@ export default function ExportPanel({
               })
             }
             className="
-              flex-1 px-2 py-1.5 text-xs
+              flex-1 px-3 py-2.5 text-xs font-medium
               bg-white dark:bg-ink-900
               border border-cream-300 dark:border-ink-600
-              rounded-md
-              focus:outline-none focus:ring-2 focus:ring-accent-teal
+              rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
               text-ink-800 dark:text-ink-100
+              transition-all duration-200
             "
           >
             <option value="sm">Small</option>
@@ -138,47 +142,47 @@ export default function ExportPanel({
       </div>
 
       {/* Resolution Section */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+      <div className="space-y-2.5">
+        <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
           Resolution
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2.5">
           {RESOLUTIONS.map((res) => (
             <button
               key={res.value}
               type="button"
               onClick={() => onResolutionChange(res.value)}
               className={`
-                py-2 px-2 rounded-md text-center transition-colors
+                py-2.5 px-2 rounded-lg text-center transition-all duration-200
                 ${
                   resolution === res.value
-                    ? "bg-accent-teal text-white"
-                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                    ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
                 }
               `}
             >
-              <div className="text-xs font-medium">{res.label}</div>
-              <div className="text-[10px] opacity-70">{res.desc}</div>
+              <div className="text-xs font-semibold">{res.label}</div>
+              <div className="text-[10px] opacity-70 mt-0.5">{res.desc}</div>
             </button>
           ))}
         </div>
       </div>
 
       {/* Background Section */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+      <div className="space-y-2.5">
+        <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
           Background
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button
             type="button"
             onClick={() => onBackgroundChange({ type: "transparent" })}
             className={`
-              flex-1 py-2 text-xs font-medium rounded-md transition-colors
+              flex-1 py-2.5 text-xs font-medium rounded-lg transition-all duration-200
               ${
                 background.type === "transparent"
-                  ? "bg-accent-teal text-white"
-                  : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                  ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                  : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
               }
             `}
           >
@@ -193,11 +197,11 @@ export default function ExportPanel({
               })
             }
             className={`
-              flex-1 py-2 text-xs font-medium rounded-md transition-colors
+              flex-1 py-2.5 text-xs font-medium rounded-lg transition-all duration-200
               ${
                 background.type === "solid"
-                  ? "bg-accent-teal text-white"
-                  : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                  ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                  : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
               }
             `}
           >
@@ -205,16 +209,16 @@ export default function ExportPanel({
           </button>
         </div>
         {background.type === "solid" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 pt-1">
             <input
               type="color"
               value={background.color ?? "#FFFFFF"}
               onChange={(e) =>
                 onBackgroundChange({ type: "solid", color: e.target.value })
               }
-              className="w-10 h-8 rounded cursor-pointer border-0 bg-transparent"
+              className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow"
             />
-            <span className="text-xs text-ink-500 dark:text-ink-400">
+            <span className="text-xs font-mono text-ink-500 dark:text-ink-400">
               {background.color ?? "#FFFFFF"}
             </span>
           </div>
@@ -222,17 +226,18 @@ export default function ExportPanel({
       </div>
 
       {/* Export Buttons */}
-      <div className="space-y-2 pt-2">
+      <div className="space-y-2.5 pt-3">
         <button
           type="button"
           onClick={() => onExport("png")}
           disabled={isExporting}
           className="
-            w-full py-2.5 text-sm font-semibold
+            w-full py-3 text-sm font-semibold
             bg-accent-teal text-white rounded-lg
-            hover:bg-accent-teal/90 transition-colors
+            hover:bg-accent-teal/90 active:scale-[0.98] transition-all duration-200
             disabled:opacity-50 disabled:cursor-not-allowed
             focus:outline-none focus:ring-2 focus:ring-accent-teal focus:ring-offset-2
+            shadow-sm shadow-accent-teal/20
           "
         >
           {isExporting ? "Exporting..." : "Export PNG"}
@@ -242,11 +247,12 @@ export default function ExportPanel({
           onClick={() => onExport("jpg")}
           disabled={isExporting}
           className="
-            w-full py-2.5 text-sm font-semibold
+            w-full py-3 text-sm font-semibold
             bg-ink-700 dark:bg-ink-600 text-white rounded-lg
-            hover:bg-ink-600 dark:hover:bg-ink-500 transition-colors
+            hover:bg-ink-600 dark:hover:bg-ink-500 active:scale-[0.98] transition-all duration-200
             disabled:opacity-50 disabled:cursor-not-allowed
             focus:outline-none focus:ring-2 focus:ring-ink-700 focus:ring-offset-2
+            shadow-sm
           "
         >
           {isExporting ? "Exporting..." : "Export JPG"}

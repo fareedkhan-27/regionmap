@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { COUNTRY_ALIASES } from "@/data/countryAliases";
 import type { CountryCode } from "@/types/map";
 import { VALID_FLIGHT_COUNTRIES } from "@/data/validFlightCountries";
@@ -26,7 +26,9 @@ export default function CountrySelector({
 }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -51,17 +53,32 @@ export default function CountrySelector({
     return COUNTRY_ALIASES;
   }, [flightOnly]);
 
-  // Filter countries based on search query
-  const filteredCountries = availableCountries.filter((country) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
+  // Debounce search query
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Filter countries based on debounced search query (memoized)
+  const filteredCountries = useMemo(() => {
+    if (!debouncedQuery) return availableCountries;
+    const query = debouncedQuery.toLowerCase();
+    return availableCountries.filter((country) => (
       country.name.toLowerCase().includes(query) ||
       country.iso2.toLowerCase().includes(query) ||
       country.iso3.toLowerCase().includes(query) ||
       country.aliases.some((alias) => alias.toLowerCase().includes(query))
-    );
-  });
+    ));
+  }, [availableCountries, debouncedQuery]);
 
   const selectedCountry = value
     ? COUNTRY_ALIASES.find((c) => c.iso2 === value)

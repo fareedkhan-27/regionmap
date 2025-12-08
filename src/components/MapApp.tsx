@@ -89,36 +89,66 @@ export default function MapApp() {
   const [enableFlightAnimation, setEnableFlightAnimation] = useState(false);
   const [flightTheme, setFlightTheme] = useState<string>("classic");
 
-  // Check for mobile viewport
+  // Check for mobile viewport (debounced)
   useEffect(() => {
+    let resizeTimer: NodeJS.Timeout;
+    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
+    
+    // Initial check
     checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    
+    // Debounced resize handler
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(checkMobile, 150);
+    };
+    
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  // Update map dimensions based on container
+  // Update map dimensions based on container (with debouncing)
   useEffect(() => {
+    let resizeTimer: NodeJS.Timeout;
+    
     const updateDimensions = () => {
       const container = document.getElementById("map-container");
       if (container) {
         const rect = container.getBoundingClientRect();
-        // In flight mode on mobile, use minimal padding for maximum space
-        const padding = (isMobile && isFlightMode) ? 8 : (isMobile ? 16 : 32);
-        const width = Math.max(rect.width - padding, 300);
-        const height = Math.max(rect.height - padding, 200);
+        // Responsive padding: mobile flight mode (8px), mobile normal (12px), desktop (16-24px)
+        const padding = (isMobile && isFlightMode) 
+          ? 8 
+          : isMobile 
+          ? 12 
+          : window.innerWidth < 1024 
+          ? 16 
+          : 24;
+        const width = Math.max(rect.width - padding * 2, 300);
+        const height = Math.max(rect.height - padding * 2, 200);
         setMapDimensions({ width, height });
       }
     };
     
-    // Delay to ensure container is rendered
-    const timer = setTimeout(updateDimensions, 100);
-    window.addEventListener("resize", updateDimensions);
+    // Initial delay to ensure container is rendered
+    const initialTimer = setTimeout(updateDimensions, 100);
+    
+    // Debounced resize handler
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(updateDimensions, 150);
+    };
+    
+    window.addEventListener("resize", handleResize);
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", updateDimensions);
+      clearTimeout(initialTimer);
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
     };
   }, [isMobile, showMobilePanel, isFlightMode]);
 
@@ -569,8 +599,8 @@ export default function MapApp() {
     setGroupCountries(targetGroupId, inverse);
   }, [allSelectedCountries, activeGroupId, setGroupCountries]);
 
-  // Mobile bottom sheet content
-  const renderMobileContent = () => {
+  // Mobile bottom sheet content (memoized)
+  const renderMobileContent = useCallback(() => {
     switch (mobileTab) {
       case "select":
         return (
@@ -613,12 +643,12 @@ export default function MapApp() {
                   </span>
                 )}
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
                 {REGION_PRESETS.slice(0, 8).map((preset) => (
                   <button
                     key={preset.id}
                     onClick={() => handlePresetSelect(preset.id)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-cream-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-accent-teal hover:text-white transition-colors"
+                    className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-full bg-cream-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-accent-teal hover:text-white active:scale-95 transition-all touch-manipulation flex-shrink-0"
                   >
                     {preset.name}
                   </button>
@@ -627,13 +657,13 @@ export default function MapApp() {
                   <>
                     <button
                       onClick={handleClearActiveGroup}
-                      className="px-3 py-1.5 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-colors"
+                      className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white active:scale-95 transition-all touch-manipulation flex-shrink-0"
                     >
                       Clear Group
                     </button>
                     <button
                       onClick={handleClearAll}
-                      className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                      className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white active:scale-95 transition-all touch-manipulation flex-shrink-0"
                     >
                       Clear All
                     </button>
@@ -641,7 +671,7 @@ export default function MapApp() {
                 ) : (
                   <button
                     onClick={handleClearAll}
-                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white transition-colors"
+                    className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-full bg-accent-coral/10 text-accent-coral hover:bg-accent-coral hover:text-white active:scale-95 transition-all touch-manipulation flex-shrink-0"
                   >
                     Clear
                   </button>
@@ -664,26 +694,29 @@ export default function MapApp() {
                   <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
                     Enter Countries
                   </label>
-                  <div className="flex gap-2">
+                  <p className="text-xs text-ink-500 dark:text-ink-400 mb-2.5">
+                    Type country names, ISO codes, or aliases (comma or line separated)
+                  </p>
+                  <div className="flex gap-2.5">
                     {config.groups.length > 0 && (
                       <input
                         type="color"
                         value={config.groups[0].color}
                         onChange={(e) => updateGroup(config.groups[0].id, { color: e.target.value })}
-                        className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 flex-shrink-0"
+                        className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 flex-shrink-0 shadow-sm hover:shadow-md transition-shadow"
                       />
                     )}
                     <div className="flex-1">
                       <textarea
                         value={countryInputTouched ? countryInput : (config.groups[0]?.countries.join(", ") ?? "")}
                         onChange={(e) => { setCountryInput(e.target.value); setCountryInputTouched(true); }}
-                        placeholder="India, UAE, Brazil, FR..."
-                        className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
+                        placeholder="e.g., India, UAE, Brazil, FR, DEU"
+                        className="w-full h-24 px-3.5 py-2.5 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal text-ink-800 dark:text-ink-100 placeholder:text-ink-400 transition-all duration-200"
                       />
                     </div>
                   </div>
                   {validationErrors.length > 0 && (
-                    <p className="mt-1 text-xs text-accent-coral">
+                    <p className="mt-2 text-xs text-accent-coral font-medium px-2.5 py-1.5 bg-accent-coral/10 dark:bg-accent-coral/20 rounded-md">
                       Not found: {validationErrors.join(", ")}
                     </p>
                   )}
@@ -795,13 +828,13 @@ export default function MapApp() {
                             setActiveGroup(group.id);
                           }}
                           onFocus={() => setActiveGroup(group.id)}
-                          placeholder="Enter countries: US, UK, France..."
-                          className="w-full h-16 px-2 py-1.5 text-base sm:text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                          placeholder="e.g., US, UK, France, DE, IT"
+                          className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal text-ink-700 dark:text-ink-200 placeholder:text-ink-400 transition-all duration-200"
                         />
 
                         {/* Country count */}
-                        <div className="mt-1.5 text-xs text-ink-500 dark:text-ink-400">
-                          {group.countries.length} countries
+                        <div className="mt-2 text-xs text-ink-500 dark:text-ink-400 font-medium">
+                          {group.countries.length} {group.countries.length === 1 ? 'country' : 'countries'} selected
                         </div>
                       </div>
                     ))}
@@ -934,7 +967,7 @@ export default function MapApp() {
 
       case "style":
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Border Color */}
             <div>
               <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
@@ -945,7 +978,7 @@ export default function MapApp() {
                   type="color"
                   value={config.borderColor}
                   onChange={(e) => setBorderColor(e.target.value)}
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600"
+                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow"
                 />
                 <span className="text-sm text-ink-600 dark:text-ink-400 font-mono">
                   {config.borderColor}
@@ -963,7 +996,7 @@ export default function MapApp() {
                   type="color"
                   value={config.background.color || "#FEFDFB"}
                   onChange={(e) => setBackground({ type: "solid", color: e.target.value })}
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600"
+                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow"
                 />
                 <span className="text-sm text-ink-600 dark:text-ink-400 font-mono">
                   {config.background.color || "#FEFDFB"}
@@ -976,7 +1009,7 @@ export default function MapApp() {
               <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Quick Styles
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { name: "Light", bg: "#FEFDFB", border: "#C7C7C3" },
                   { name: "Dark", bg: "#1A1A19", border: "#4a5568" },
@@ -989,7 +1022,7 @@ export default function MapApp() {
                       setBackground({ type: "solid", color: style.bg });
                       setBorderColor(style.border);
                     }}
-                    className="p-3 rounded-lg border-2 border-cream-300 dark:border-ink-600 text-sm font-medium transition-colors hover:border-accent-teal"
+                    className="p-3.5 rounded-lg border-2 border-cream-300 dark:border-ink-600 text-sm font-semibold transition-all duration-200 hover:border-accent-teal hover:shadow-md active:scale-[0.98]"
                     style={{ backgroundColor: style.bg }}
                   >
                     <span style={{ color: style.name === "Dark" ? "#fff" : "#1A1A19" }}>
@@ -1007,10 +1040,10 @@ export default function MapApp() {
               </label>
               <button
                 onClick={() => setShowCountryLabels(!showCountryLabels)}
-                className={`w-full py-3 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] ${
                   showCountryLabels
-                    ? "bg-accent-teal text-white"
-                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                    ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                    : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1024,7 +1057,7 @@ export default function MapApp() {
 
       case "export":
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Title */}
             <div>
               <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
@@ -1035,7 +1068,7 @@ export default function MapApp() {
                 value={config.titleConfig.title}
                 onChange={(e) => setTitleConfig({ title: e.target.value })}
                 placeholder="My Region Map"
-                className="w-full px-3 py-2.5 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
+                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal text-ink-800 dark:text-ink-100 placeholder:text-ink-400 transition-all duration-200"
               />
             </div>
 
@@ -1049,7 +1082,7 @@ export default function MapApp() {
                 value={config.titleConfig.subtitle || ""}
                 onChange={(e) => setTitleConfig({ subtitle: e.target.value })}
                 placeholder="Q4 2024 Coverage"
-                className="w-full px-3 py-2.5 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-teal text-ink-800 dark:text-ink-100"
+                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-ink-800 border border-cream-300 dark:border-ink-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal text-ink-800 dark:text-ink-100 placeholder:text-ink-400 transition-all duration-200"
               />
             </div>
 
@@ -1058,7 +1091,7 @@ export default function MapApp() {
               <label className="block text-xs font-semibold text-ink-500 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Resolution
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2.5">
                 {([
                   { value: "1080p", label: "1080p", sub: "1920×1080" },
                   { value: "4k", label: "4K", sub: "3840×2160" },
@@ -1067,25 +1100,25 @@ export default function MapApp() {
                   <button
                     key={res.value}
                     onClick={() => setResolution(res.value)}
-                    className={`py-2.5 rounded-lg transition-all ${
+                    className={`py-2.5 rounded-lg transition-all duration-200 active:scale-[0.98] ${
                       config.resolution === res.value
-                        ? "bg-accent-teal text-white shadow-md"
-                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                        ? "bg-accent-teal text-white shadow-sm shadow-accent-teal/20"
+                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
                     }`}
                   >
-                    <div className="text-sm font-medium">{res.label}</div>
-                    <div className="text-[10px] opacity-70">{res.sub}</div>
+                    <div className="text-xs font-semibold">{res.label}</div>
+                    <div className="text-[10px] opacity-70 mt-0.5">{res.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Export Buttons */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2.5 pt-3">
               <button
                 onClick={() => handleExport("png")}
                 disabled={isExporting}
-                className="w-full py-3.5 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-accent-teal/20"
               >
                 {isExporting ? (
                   <>
@@ -1107,7 +1140,7 @@ export default function MapApp() {
               <button
                 onClick={() => handleExport("jpg")}
                 disabled={isExporting}
-                className="w-full py-3.5 text-sm font-semibold bg-ink-700 dark:bg-ink-600 text-white rounded-lg hover:bg-ink-600 dark:hover:bg-ink-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 text-sm font-semibold bg-ink-700 dark:bg-ink-600 text-white rounded-lg hover:bg-ink-600 dark:hover:bg-ink-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -1135,10 +1168,58 @@ export default function MapApp() {
           </div>
         );
     }
-  };
+  }, [
+    config,
+    activeGroupId,
+    setMode,
+    handlePresetSelect,
+    handleClearActiveGroup,
+    handleClearAll,
+    allSelectedCountries,
+    handleAddNeighbors,
+    handleSelectContinent,
+    handleInverseSelection,
+    countryInput,
+    countryInputTouched,
+    setCountryInput,
+    setCountryInputTouched,
+    validationErrors,
+    groupInputs,
+    handleGroupInputChange,
+    applyGroupInput,
+    applyAllGroupInputs,
+    handleAddGroup,
+    handleRemoveGroup,
+    updateGroup,
+    setActiveGroup,
+    enableFlightAnimation,
+    setEnableFlightAnimation,
+    flightOrigin,
+    flightDestination,
+    handleFlightOriginChange,
+    handleFlightDestinationChange,
+    flightTheme,
+    setFlightTheme,
+    flightDurationMs,
+    setFlightDurationMs,
+    isFlightPlaying,
+    handlePlayFlight,
+    handleStopFlight,
+    handleSurpriseMe,
+    setBackground,
+    setBorderColor,
+    setTitleConfig,
+    setResolution,
+    showCountryLabels,
+    setShowCountryLabels,
+    handleExport,
+    isExporting,
+    exportSuccess,
+    mobileTab,
+  ]);
 
   return (
-    <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "dark" : ""} ${isDarkMode ? "bg-gradient-dark" : "bg-gradient-to-br from-slate-50 to-blue-50"}`}>
+    <div className={`h-screen max-h-screen flex flex-col overflow-hidden ${isDarkMode ? "dark" : ""} ${isDarkMode ? "bg-gradient-dark" : "bg-gradient-to-br from-slate-50 to-blue-50"}`}>
       {/* Header */}
       <header className="flex-shrink-0 border-b border-neon-cyan/20 dark:border-neon-purple/30 bg-white/70 dark:bg-void-900/70 backdrop-blur-xl z-20 shadow-lg dark:shadow-neon-purple">
         <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3">
@@ -1163,10 +1244,11 @@ export default function MapApp() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {/* Zoom controls - desktop only */}
             {!isMobile && (
               <>
+                {/* Core Actions - Always Visible */}
                 <button
                   onClick={undo}
                   disabled={!canUndo}
@@ -1190,7 +1272,7 @@ export default function MapApp() {
                 <button
                   onClick={handleZoomToSelection}
                   disabled={!hasSelection}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
+                  className="hidden lg:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
                 >
                   Zoom to Selection
                 </button>
@@ -1211,39 +1293,39 @@ export default function MapApp() {
                 >
                   Labels
                 </button>
-                {/* Random & Fun Features */}
+                {/* Random & Fun Features - Hidden on medium screens */}
                 <button
                   onClick={randomizeGroupColors}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-pink border border-space-200 dark:border-neon-pink/30 hover:border-neon-pink dark:hover:border-neon-pink hover:shadow-neon-pink transition-all duration-300"
+                  className="hidden xl:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-pink border border-space-200 dark:border-neon-pink/30 hover:border-neon-pink dark:hover:border-neon-pink hover:shadow-neon-pink transition-all duration-300"
                   title="Randomize group colors"
                 >
                   🎨 Random
                 </button>
                 <button
                   onClick={colorAllCountries}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white border border-purple-400 hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
+                  className="hidden xl:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white border border-purple-400 hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
                   title="Color all countries in the world"
                 >
                   🌍 All
                 </button>
-                {/* Save/Load/Share */}
+                {/* Save/Load/Share - Hidden on medium screens */}
                 <button
                   onClick={handleSaveConfig}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
+                  className="hidden xl:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
                   title="Save configuration"
                 >
                   💾
                 </button>
                 <button
                   onClick={handleLoadConfig}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
+                  className="hidden xl:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-cyan border border-space-200 dark:border-neon-cyan/30 hover:border-neon-cyan dark:hover:border-neon-cyan hover:shadow-neon transition-all duration-300"
                   title="Load configuration"
                 >
                   📂
                 </button>
                 <button
                   onClick={handleShareURL}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-purple border border-space-200 dark:border-neon-purple/30 hover:border-neon-purple dark:hover:border-neon-purple hover:shadow-neon-purple transition-all duration-300"
+                  className="hidden xl:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 dark:bg-void-800/80 backdrop-blur-sm text-space-700 dark:text-neon-purple border border-space-200 dark:border-neon-purple/30 hover:border-neon-purple dark:hover:border-neon-purple hover:shadow-neon-purple transition-all duration-300"
                   title="Copy share URL"
                 >
                   🔗
@@ -1274,7 +1356,7 @@ export default function MapApp() {
       <main className="flex-1 flex overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:bg-gradient-dark">
         {/* Desktop: Side Panel */}
         {!isMobile && (
-          <aside className="w-80 flex-shrink-0 border-r border-neon-cyan/20 dark:border-neon-purple/20 bg-white/40 dark:bg-void-900/40 backdrop-blur-xl overflow-y-auto shadow-glass">
+          <aside className="w-64 lg:w-80 xl:w-96 flex-shrink-0 border-r border-neon-cyan/20 dark:border-neon-purple/20 bg-white/40 dark:bg-void-900/40 backdrop-blur-xl overflow-y-auto shadow-glass custom-scrollbar">
             <div className="p-4 space-y-6">
               {/* Mode Toggle */}
               <div>
@@ -1501,8 +1583,8 @@ export default function MapApp() {
                             setActiveGroup(group.id);
                           }}
                           onFocus={() => setActiveGroup(group.id)}
-                          placeholder="Enter countries: US, UK, France..."
-                          className="w-full h-16 px-2 py-1.5 text-base sm:text-xs bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded resize-none focus:outline-none focus:ring-1 focus:ring-accent-teal text-ink-700 dark:text-ink-200"
+                          placeholder="e.g., US, UK, France, DE, IT"
+                          className="w-full h-20 px-3 py-2 text-sm bg-white dark:bg-ink-900 border border-cream-300 dark:border-ink-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal text-ink-800 dark:text-ink-100 placeholder:text-ink-400 transition-all duration-200"
                         />
 
                         {/* Country count */}
@@ -1766,27 +1848,27 @@ export default function MapApp() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Mobile: Status bar - hidden in flight mode */}
           {isMobile && !isFlightMode && (
-            <div className="flex-shrink-0 px-3 py-2 bg-cream-50/95 dark:bg-ink-900/95 border-b border-cream-200 dark:border-ink-800 flex items-center justify-between">
-              <div className="text-xs text-ink-500 dark:text-ink-400">
+            <div className="flex-shrink-0 px-3 sm:px-4 py-2.5 bg-cream-50/95 dark:bg-ink-900/95 border-b border-cream-200 dark:border-ink-800 flex items-center justify-between safe-area-top">
+              <div className="text-xs sm:text-sm text-ink-500 dark:text-ink-400 flex-1 min-w-0">
                 {hasSelection ? (
-                  <span className="font-medium text-ink-700 dark:text-ink-200">
-                    {allSelectedCountries.length} countries selected
+                  <span className="font-medium text-ink-700 dark:text-ink-200 truncate">
+                    {allSelectedCountries.length} {allSelectedCountries.length === 1 ? 'country' : 'countries'} selected
                   </span>
                 ) : (
-                  <span>👇 Tap buttons below to start</span>
+                  <span className="truncate">👇 Tap buttons below to start</span>
                 )}
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-2 ml-2 flex-shrink-0">
                 <button
                   onClick={handleZoomToSelection}
                   disabled={!hasSelection}
-                  className="px-2 py-1 text-[10px] font-medium rounded bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 disabled:opacity-40"
+                  className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-lg bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation active:scale-95 transition-transform"
                 >
                   Zoom
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="px-2 py-1 text-[10px] font-medium rounded bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300"
+                  className="px-3 py-2 min-h-[36px] text-xs font-medium rounded-lg bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 touch-manipulation active:scale-95 transition-transform"
                 >
                   Reset
                 </button>
@@ -1798,7 +1880,11 @@ export default function MapApp() {
           <div
             id="map-container"
             className={`flex-1 relative overflow-hidden flex items-center justify-center transition-all duration-300 ${
-              isMobile && isFlightMode ? "p-1" : isMobile ? "p-2" : "p-4"
+              isMobile && isFlightMode 
+                ? "p-2" 
+                : isMobile 
+                ? "p-3 sm:p-2" 
+                : "p-2 sm:p-4 lg:p-6"
             }`}
           >
             <WorldMap
@@ -1834,11 +1920,11 @@ export default function MapApp() {
 
             {/* Mobile Floating Controls - Top Right */}
             {isMobile && !isFlightMode && (
-              <div className="absolute top-2 right-2 flex flex-col gap-2">
+              <div className="absolute top-3 right-3 flex flex-col gap-2.5">
                 {/* Zoom Reset */}
                 <button
                   onClick={() => mapRef.current?.resetZoom()}
-                  className="p-2.5 bg-white dark:bg-ink-800 rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300 hover:bg-cream-100 active:bg-cream-200"
+                  className="p-3 min-w-[44px] min-h-[44px] bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300 active:bg-cream-100 active:scale-95 transition-all touch-manipulation flex items-center justify-center"
                   title="Reset Zoom"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1849,10 +1935,10 @@ export default function MapApp() {
                 {/* Labels Toggle */}
                 <button
                   onClick={() => setShowCountryLabels(!showCountryLabels)}
-                  className={`p-2.5 rounded-lg shadow-lg border transition-colors ${
+                  className={`p-3 min-w-[44px] min-h-[44px] rounded-lg shadow-lg border transition-all touch-manipulation active:scale-95 flex items-center justify-center ${
                     showCountryLabels
                       ? "bg-accent-teal text-white border-accent-teal"
-                      : "bg-white dark:bg-ink-800 border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300"
+                      : "bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm border-cream-200 dark:border-ink-600 text-ink-600 dark:text-ink-300"
                   }`}
                   title={showCountryLabels ? "Hide Labels" : "Show Labels"}
                 >
@@ -1867,24 +1953,24 @@ export default function MapApp() {
             {isMobile && isFlightMode && (
               <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Back to Editing Button - Top Left */}
-                <div className="absolute top-2 left-2 pointer-events-auto">
+                <div className="absolute top-3 left-3 pointer-events-auto">
                   <button
                     onClick={() => {
                       setIsFlightMode(false);
                       setEnableFlightAnimation(false);
                     }}
-                    className="px-3 py-2 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-700 dark:text-ink-200 text-sm font-medium flex items-center gap-2 hover:bg-cream-100 dark:hover:bg-ink-700 transition-colors"
+                    className="px-4 py-2.5 min-h-[44px] bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 text-ink-700 dark:text-ink-200 text-sm font-medium flex items-center gap-2 active:bg-cream-100 dark:active:bg-ink-700 active:scale-95 transition-all touch-manipulation"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Back to Editing
+                    Back
                   </button>
                 </div>
 
                 {/* Flight Controls - Bottom Center (compact) */}
-                <div className="absolute bottom-2 left-2 right-2 pointer-events-auto">
-                  <div className="bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-cream-200 dark:border-ink-600 p-3 space-y-2 max-h-[50vh] overflow-y-auto">
+                <div className="absolute bottom-3 left-3 right-3 pointer-events-auto safe-area-bottom">
+                  <div className="bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-cream-200 dark:border-ink-600 p-4 space-y-3 max-h-[55vh] overflow-y-auto custom-scrollbar touch-pan-y">
                     {/* Origin & Destination - Compact */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -1965,7 +2051,7 @@ export default function MapApp() {
                       <button
                         onClick={handlePlayFlight}
                         disabled={!flightOrigin || !flightDestination || isFlightPlaying}
-                        className="flex-1 py-2 text-xs font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-3 min-h-[44px] text-sm font-semibold bg-accent-teal text-white rounded-lg hover:bg-accent-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-1.5"
                       >
                         {isFlightPlaying ? (
                           <>
@@ -1988,10 +2074,10 @@ export default function MapApp() {
                       {isFlightPlaying && (
                         <button
                           onClick={handleStopFlight}
-                          className="px-3 py-2 text-xs font-semibold bg-accent-coral text-white rounded-lg hover:bg-accent-coral/90 transition-colors flex items-center justify-center"
+                          className="px-4 py-3 min-h-[44px] min-w-[44px] text-sm font-semibold bg-accent-coral text-white rounded-lg hover:bg-accent-coral/90 active:scale-95 transition-all touch-manipulation flex items-center justify-center"
                           title="Stop Flight"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
@@ -1999,7 +2085,7 @@ export default function MapApp() {
                       <button
                         onClick={handleSurpriseMe}
                         disabled={isFlightPlaying}
-                        className="px-3 py-2 text-xs font-medium bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 rounded-lg hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 transition-colors flex items-center justify-center"
+                        className="px-4 py-3 min-h-[44px] min-w-[44px] text-sm font-medium bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 rounded-lg hover:bg-cream-300 dark:hover:bg-ink-600 disabled:opacity-50 active:scale-95 transition-all touch-manipulation flex items-center justify-center"
                         title="Surprise Me"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2043,19 +2129,19 @@ export default function MapApp() {
             )}
             
             {/* Panel */}
-            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[45vh] flex flex-col">
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-t-2xl shadow-2xl max-h-[60vh] sm:max-h-[50vh] flex flex-col safe-area-bottom">
               {/* Handle with Close Button */}
-              <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
                 <div className="flex-1 flex justify-center">
                   <button
                     onClick={() => setShowMobilePanel(false)}
-                    className="w-10 h-1 bg-cream-400 dark:bg-ink-600 rounded-full cursor-pointer hover:bg-cream-500 dark:hover:bg-ink-500 transition-colors"
+                    className="w-12 h-1.5 bg-cream-400 dark:bg-ink-600 rounded-full cursor-pointer hover:bg-cream-500 dark:hover:bg-ink-500 transition-colors touch-manipulation"
                     aria-label="Close panel"
                   />
                 </div>
                 <button
                   onClick={() => setShowMobilePanel(false)}
-                  className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400 transition-colors"
+                  className="p-2.5 min-w-[44px] min-h-[44px] rounded-lg hover:bg-cream-200 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400 transition-colors touch-manipulation flex items-center justify-center"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2065,7 +2151,7 @@ export default function MapApp() {
               </div>
 
               {/* Tab Header */}
-              <div className="flex border-b border-cream-200 dark:border-ink-700 px-4 flex-shrink-0">
+              <div className="flex border-b border-cream-200 dark:border-ink-700 px-2 sm:px-4 flex-shrink-0">
                 {([
                   { id: "select", label: "Select", icon: "🌍" },
                   { id: "style", label: "Style", icon: "🎨" },
@@ -2074,7 +2160,7 @@ export default function MapApp() {
                   <button
                     key={tab.id}
                     onClick={() => setMobileTab(tab.id)}
-                    className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`flex-1 py-3.5 min-h-[44px] text-sm font-medium border-b-2 transition-colors touch-manipulation ${
                       mobileTab === tab.id
                         ? "border-accent-teal text-accent-teal"
                         : "border-transparent text-ink-500 dark:text-ink-400"
@@ -2087,7 +2173,7 @@ export default function MapApp() {
               </div>
               
               {/* Tab Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 pb-2 min-h-0">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-2 min-h-0 custom-scrollbar touch-pan-y">
                 {renderMobileContent()}
               </div>
               
@@ -2103,7 +2189,7 @@ export default function MapApp() {
                       }
                       setShowMobilePanel(false);
                     }}
-                    className="w-full py-3 text-sm font-semibold bg-accent-teal text-white rounded-xl hover:bg-accent-teal/90 transition-colors shadow-lg flex items-center justify-center gap-2"
+                    className="w-full py-3.5 min-h-[48px] text-sm font-semibold bg-accent-teal text-white rounded-xl hover:bg-accent-teal/90 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2 touch-manipulation"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2149,7 +2235,7 @@ export default function MapApp() {
                       setShowMobilePanel(true);
                     }
                   }}
-                  className={`flex-1 flex flex-col items-center py-3 transition-colors active:bg-cream-100 dark:active:bg-ink-800 ${
+                  className={`flex-1 flex flex-col items-center py-3 min-h-[64px] transition-colors active:bg-cream-100 dark:active:bg-ink-800 touch-manipulation ${
                     showMobilePanel && mobileTab === tab.id
                       ? "text-accent-teal"
                       : "text-ink-600 dark:text-ink-400"

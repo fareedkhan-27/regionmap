@@ -75,17 +75,17 @@ export default function GroupsPanel({
           <div
             key={group.id}
             className={`
-              rounded-lg border-2 transition-all duration-150 overflow-hidden
+              rounded-lg border-2 transition-all duration-200 overflow-hidden
               ${
                 isActive
-                  ? "border-accent-teal bg-accent-teal/5 dark:bg-accent-teal/10"
-                  : "border-cream-300 dark:border-ink-600 bg-cream-50 dark:bg-ink-800/50"
+                  ? "border-accent-teal bg-accent-teal/5 dark:bg-accent-teal/10 shadow-sm shadow-accent-teal/10"
+                  : "border-cream-300 dark:border-ink-600 bg-cream-50 dark:bg-ink-800/50 hover:border-cream-400 dark:hover:border-ink-500"
               }
             `}
           >
             {/* Group Header */}
             <div
-              className="flex items-center gap-2 p-3 cursor-pointer"
+              className="flex items-center gap-3 p-3.5 cursor-pointer"
               onClick={() => onSelectGroup(group.id)}
             >
               {/* Color picker */}
@@ -96,7 +96,7 @@ export default function GroupsPanel({
                   onUpdateGroup(group.id, { color: e.target.value })
                 }
                 onClick={(e) => e.stopPropagation()}
-                className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                className="w-10 h-10 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow flex-shrink-0"
                 title="Pick group color"
               />
 
@@ -109,11 +109,12 @@ export default function GroupsPanel({
                 }
                 onClick={(e) => e.stopPropagation()}
                 className="
-                  flex-1 px-2 py-1 text-sm font-medium
-                  bg-transparent border-b border-transparent
+                  flex-1 px-2.5 py-1.5 text-sm font-medium
+                  bg-transparent border-b-2 border-transparent
                   hover:border-ink-300 dark:hover:border-ink-500
                   focus:border-accent-teal focus:outline-none
                   text-ink-800 dark:text-ink-100
+                  transition-colors duration-200
                 "
                 placeholder="Group name"
               />
@@ -165,34 +166,35 @@ export default function GroupsPanel({
 
             {/* Expanded content when active */}
             {isActive && (
-              <div className="px-3 pb-3 space-y-2">
+              <div className="px-3.5 pb-3.5 space-y-2.5">
                 {/* Countries textarea */}
                 <textarea
                   value={inputValue}
                   onChange={(e) => handleInputChange(group.id, e.target.value)}
-                  placeholder="Enter country names or codes (comma or line separated)&#10;e.g., India, UAE, Brazil, FR, DEU"
+                  placeholder="e.g., India, UAE, Brazil, FR, DEU"
                   className="
-                    w-full h-24 px-3 py-2 text-sm
+                    w-full h-28 px-3.5 py-2.5 text-sm
                     bg-white dark:bg-ink-900
                     border border-cream-300 dark:border-ink-600
-                    rounded-md resize-none
-                    focus:outline-none focus:ring-2 focus:ring-accent-teal
+                    rounded-lg resize-none
+                    focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
                     text-ink-800 dark:text-ink-100
                     placeholder:text-ink-400
+                    transition-all duration-200
                   "
                 />
 
                 {/* Validation errors */}
                 {errors.length > 0 && (
-                  <div className="text-xs text-accent-coral">
+                  <div className="text-xs text-accent-coral font-medium px-2.5 py-1.5 bg-accent-coral/10 dark:bg-accent-coral/20 rounded-md">
                     Not recognized: {errors.join(", ")}
                   </div>
                 )}
 
                 {/* Current selection summary */}
                 {group.countries.length > 0 && (
-                  <div className="text-xs text-ink-500 dark:text-ink-400">
-                    Selected: {formatCountryList(group.countries, 8)}
+                  <div className="text-xs text-ink-500 dark:text-ink-400 px-2 py-1.5 bg-cream-100 dark:bg-ink-800/50 rounded-md">
+                    <span className="font-medium">{group.countries.length} countries:</span> {formatCountryList(group.countries, 8)}
                   </div>
                 )}
 
@@ -201,10 +203,11 @@ export default function GroupsPanel({
                   type="button"
                   onClick={() => handleValidate(group.id)}
                   className="
-                    w-full py-1.5 text-sm font-medium
-                    bg-accent-teal text-white rounded-md
-                    hover:bg-accent-teal/90 transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-accent-teal focus:ring-offset-1
+                    w-full py-2.5 text-sm font-semibold
+                    bg-accent-teal text-white rounded-lg
+                    hover:bg-accent-teal/90 active:scale-[0.98] transition-all duration-200
+                    focus:outline-none focus:ring-2 focus:ring-accent-teal focus:ring-offset-2
+                    shadow-sm shadow-accent-teal/20
                   "
                 >
                   Update Selection

@@ -195,25 +195,25 @@ export default function ControlsPanel({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar">
         {/* Selection Section */}
         {activeSection === "selection" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Mode Toggle */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Selection Mode
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => onModeChange("single")}
                   className={`
-                    flex-1 py-2 text-sm font-medium rounded-md transition-colors
+                    flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
                     ${
                       mode === "single"
-                        ? "bg-accent-teal text-white"
-                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                        ? "bg-accent-teal text-white shadow-md shadow-accent-teal/20"
+                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
                     }
                   `}
                 >
@@ -223,11 +223,11 @@ export default function ControlsPanel({
                   type="button"
                   onClick={() => onModeChange("multi")}
                   className={`
-                    flex-1 py-2 text-sm font-medium rounded-md transition-colors
+                    flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
                     ${
                       mode === "multi"
-                        ? "bg-accent-teal text-white"
-                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600"
+                        ? "bg-accent-teal text-white shadow-md shadow-accent-teal/20"
+                        : "bg-cream-200 dark:bg-ink-700 text-ink-600 dark:text-ink-300 hover:bg-cream-300 dark:hover:bg-ink-600 active:scale-[0.98]"
                     }
                   `}
                 >
@@ -251,32 +251,36 @@ export default function ControlsPanel({
 
             {/* Single Mode Input */}
             {mode === "single" && groups.length > 0 && (
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+              <div className="space-y-2.5">
+                <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                   Enter Countries
                 </label>
-                <div className="flex items-start gap-2">
+                <p className="text-xs text-ink-500 dark:text-ink-400 mb-2">
+                  Type country names, ISO codes, or common aliases (comma or line separated)
+                </p>
+                <div className="flex items-start gap-3">
                   <div
-                    className="w-6 h-6 rounded flex-shrink-0 mt-2"
+                    className="w-10 h-10 rounded-lg flex-shrink-0 mt-1 shadow-sm border border-cream-300 dark:border-ink-600"
                     style={{ backgroundColor: groups[0].color }}
                   />
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2.5">
                     <textarea
                       value={singleInput || groups[0].countries.join(", ")}
                       onChange={(e) => setSingleInput(e.target.value)}
-                      placeholder="Enter country names or codes (comma or line separated)&#10;e.g., India, UAE, Brazil, FR, DEU"
+                      placeholder="e.g., India, UAE, Brazil, FR, DEU"
                       className="
-                        w-full h-28 px-3 py-2 text-sm
+                        w-full h-32 px-3.5 py-2.5 text-sm
                         bg-white dark:bg-ink-900
                         border border-cream-300 dark:border-ink-600
-                        rounded-md resize-none
-                        focus:outline-none focus:ring-2 focus:ring-accent-teal
+                        rounded-lg resize-none
+                        focus:outline-none focus:ring-2 focus:ring-accent-teal focus:border-accent-teal
                         text-ink-800 dark:text-ink-100
                         placeholder:text-ink-400
+                        transition-all duration-200
                       "
                     />
                     {validationErrors.length > 0 && (
-                      <div className="text-xs text-accent-coral">
+                      <div className="text-xs text-accent-coral font-medium px-2 py-1.5 bg-accent-coral/10 dark:bg-accent-coral/20 rounded-md">
                         Not recognized: {validationErrors.join(", ")}
                       </div>
                     )}
@@ -284,10 +288,11 @@ export default function ControlsPanel({
                       type="button"
                       onClick={handleSingleValidate}
                       className="
-                        w-full py-2 text-sm font-medium
-                        bg-accent-teal text-white rounded-md
-                        hover:bg-accent-teal/90 transition-colors
-                        focus:outline-none focus:ring-2 focus:ring-accent-teal focus:ring-offset-1
+                        w-full py-2.5 text-sm font-semibold
+                        bg-accent-teal text-white rounded-lg
+                        hover:bg-accent-teal/90 active:scale-[0.98] transition-all duration-200
+                        focus:outline-none focus:ring-2 focus:ring-accent-teal focus:ring-offset-2
+                        shadow-sm shadow-accent-teal/20
                       "
                     >
                       Generate Map
@@ -299,7 +304,7 @@ export default function ControlsPanel({
                     onChange={(e) =>
                       onUpdateGroup(groups[0].id, { color: e.target.value })
                     }
-                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent flex-shrink-0 mt-2"
+                    className="w-10 h-10 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 flex-shrink-0 mt-1 shadow-sm hover:shadow-md transition-shadow"
                     title="Pick highlight color"
                   />
                 </div>
@@ -321,14 +326,14 @@ export default function ControlsPanel({
 
             {/* Selection summary */}
             {selectedCountries.length > 0 && (
-              <div className="p-3 bg-cream-100 dark:bg-ink-800 rounded-lg">
-                <div className="text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide mb-1">
+              <div className="p-4 bg-cream-100 dark:bg-ink-800 rounded-lg border border-cream-200 dark:border-ink-700">
+                <div className="text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                   Total Selected
                 </div>
-                <div className="text-sm text-ink-800 dark:text-ink-200">
-                  {selectedCountries.length} countries
+                <div className="text-base font-semibold text-ink-800 dark:text-ink-200 mb-1.5">
+                  {selectedCountries.length} {selectedCountries.length === 1 ? 'country' : 'countries'}
                 </div>
-                <div className="text-xs text-ink-500 dark:text-ink-400 mt-1">
+                <div className="text-xs text-ink-500 dark:text-ink-400 leading-relaxed">
                   {formatCountryList(selectedCountries, 6)}
                 </div>
               </div>
@@ -338,10 +343,10 @@ export default function ControlsPanel({
 
         {/* Appearance Section */}
         {activeSection === "appearance" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Border Color */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Country Borders
               </label>
               <div className="flex items-center gap-3">
@@ -349,17 +354,17 @@ export default function ControlsPanel({
                   type="color"
                   value={borderColor}
                   onChange={(e) => onBorderColorChange(e.target.value)}
-                  className="w-10 h-8 rounded cursor-pointer border-0 bg-transparent"
+                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow"
                 />
-                <span className="text-sm text-ink-600 dark:text-ink-400">
+                <span className="text-sm font-mono text-ink-600 dark:text-ink-400">
                   {borderColor}
                 </span>
               </div>
             </div>
 
             {/* Background for preview */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Map Background
               </label>
               <div className="flex items-center gap-3">
@@ -369,20 +374,20 @@ export default function ControlsPanel({
                   onChange={(e) =>
                     onBackgroundChange({ type: "solid", color: e.target.value })
                   }
-                  className="w-10 h-8 rounded cursor-pointer border-0 bg-transparent"
+                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-cream-300 dark:border-ink-600 shadow-sm hover:shadow-md transition-shadow"
                 />
-                <span className="text-sm text-ink-600 dark:text-ink-400">
+                <span className="text-sm font-mono text-ink-600 dark:text-ink-400">
                   {background.color ?? "#FEFDFB"}
                 </span>
               </div>
             </div>
 
             {/* Color presets for quick styling */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider mb-2">
                 Quick Styles
               </label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {[
                   { bg: "#FEFDFB", border: "#C7C7C3", name: "Light" },
                   { bg: "#1A1A19", border: "#4a5568", name: "Dark" },
@@ -397,9 +402,9 @@ export default function ControlsPanel({
                       onBorderColorChange(style.border);
                     }}
                     className="
-                      p-2 rounded-md border border-cream-300 dark:border-ink-600
-                      hover:border-accent-teal transition-colors
-                      text-xs font-medium text-ink-600 dark:text-ink-400
+                      p-3 rounded-lg border-2 border-cream-300 dark:border-ink-600
+                      hover:border-accent-teal hover:shadow-md active:scale-[0.98] transition-all duration-200
+                      text-xs font-semibold text-ink-600 dark:text-ink-400
                     "
                     style={{ backgroundColor: style.bg }}
                   >

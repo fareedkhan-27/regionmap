@@ -8,6 +8,8 @@ import React, {
   useMemo,
   forwardRef,
   useImperativeHandle,
+  lazy,
+  Suspense,
 } from "react";
 import * as d3 from "d3";
 import * as topojson from "topojson-client";
@@ -22,8 +24,11 @@ import {
   createGraticule,
 } from "@/utils/worldMap";
 import { getCountryCentroid } from "@/utils/countryCentroids";
-import FlightPath from "./FlightPath";
+import { getCachedGeoData } from "@/utils/geoDataCache";
 import type { CountryCode, MapConfig } from "@/types/map";
+
+// Lazy load FlightPath component
+const FlightPath = lazy(() => import("./FlightPath"));
 
 interface CountryProperties {
   name: string;
@@ -94,22 +99,14 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       resetZoom: () => resetMapZoom(),
     }));
 
-    // Load world topology data
+    // Load world topology data (using cache)
     useEffect(() => {
       const loadWorldData = async () => {
         setIsLoading(true);
         setError(null);
         try {
-          // Fetch from world-atlas CDN
-          const response = await fetch(
-            "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
-          );
-          if (!response.ok) {
-            throw new Error("Failed to load world map data");
-          }
-          const topology = (await response.json()) as Topology<{
-            countries: GeometryCollection<CountryProperties>;
-          }>;
+          // Use cached geo data
+          const topology = await getCachedGeoData();
           
           // Convert TopoJSON to GeoJSON
           const countries = topojson.feature(
@@ -300,13 +297,17 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       return onFlightProgress || handleFlightProgress;
     }, [onFlightProgress, handleFlightProgress]);
 
-    // Theme colors
-    const colors = {
+    // Theme colors (memoized)
+    const colors = useMemo(() => ({
       ocean: isDarkMode ? "#1a2332" : config.background.type === "solid" ? (config.background.color ?? "#FEFDFB") : "#F5F7FA",
       land: isDarkMode ? "#2d3748" : "#E8E8E4",
       border: isDarkMode ? "#4a5568" : config.borderColor,
       graticule: isDarkMode ? "#2d3748" : "#E0E0DC",
-    };
+    }), [isDarkMode, config.background, config.borderColor]);
+
+    // Memoize path generator and graticule
+    const pathGenerator = useMemo(() => createPathGenerator(projectionRef.current), []);
+    const graticule = useMemo(() => createGraticule(), []);
 
     if (isLoading) {
       return (
@@ -342,9 +343,6 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
 
     if (!geoData) return null;
 
-    const pathGenerator = createPathGenerator(projectionRef.current);
-    const graticule = createGraticule();
-
     return (
       <>
       <svg
@@ -373,49 +371,52 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             <rect width="4" height="4" fill={colors.land} />
           </pattern>
 
-          {/* Patterns for each group */}
-          {config.groups.map((group) => {
-            const patternId = `pattern-${group.id}`;
-            const pattern = group.pattern || "solid";
+          {/* Patterns for each group (memoized) */}
+          {useMemo(() => 
+            config.groups.map((group) => {
+              const patternId = `pattern-${group.id}`;
+              const pattern = group.pattern || "solid";
 
-            if (pattern === "solid") return null;
+              if (pattern === "solid") return null;
 
-            return (
-              <pattern
-                key={patternId}
-                id={patternId}
-                patternUnits="userSpaceOnUse"
-                width="8"
-                height="8"
-                patternTransform="rotate(0)"
-              >
-                <rect width="8" height="8" fill={group.color} opacity="0.3" />
-                {pattern === "stripes" && (
-                  <>
-                    <line x1="0" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="3" />
-                    <line x1="4" y1="0" x2="4" y2="8" stroke={group.color} strokeWidth="3" />
-                  </>
-                )}
-                {pattern === "dots" && (
-                  <>
-                    <circle cx="2" cy="2" r="1.5" fill={group.color} />
-                    <circle cx="6" cy="6" r="1.5" fill={group.color} />
-                  </>
-                )}
-                {pattern === "crosshatch" && (
-                  <>
-                    <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="1.5" />
-                    <line x1="8" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="1.5" />
-                  </>
-                )}
-                {pattern === "diagonal" && (
-                  <>
-                    <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="2" />
-                  </>
-                )}
-              </pattern>
-            );
-          })}
+              return (
+                <pattern
+                  key={patternId}
+                  id={patternId}
+                  patternUnits="userSpaceOnUse"
+                  width="8"
+                  height="8"
+                  patternTransform="rotate(0)"
+                >
+                  <rect width="8" height="8" fill={group.color} opacity="0.3" />
+                  {pattern === "stripes" && (
+                    <>
+                      <line x1="0" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="3" />
+                      <line x1="4" y1="0" x2="4" y2="8" stroke={group.color} strokeWidth="3" />
+                    </>
+                  )}
+                  {pattern === "dots" && (
+                    <>
+                      <circle cx="2" cy="2" r="1.5" fill={group.color} />
+                      <circle cx="6" cy="6" r="1.5" fill={group.color} />
+                    </>
+                  )}
+                  {pattern === "crosshatch" && (
+                    <>
+                      <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="1.5" />
+                      <line x1="8" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="1.5" />
+                    </>
+                  )}
+                  {pattern === "diagonal" && (
+                    <>
+                      <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="2" />
+                    </>
+                  )}
+                </pattern>
+              );
+            }),
+            [config.groups]
+          )}
         </defs>
 
         <g ref={gRef}>
@@ -516,7 +517,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             );
           })}
 
-          {/* Flight Path Animation */}
+          {/* Flight Path Animation - Lazy loaded */}
           {flightOrigin && flightDestination && (() => {
             const originCoords = getCountryCentroid(flightOrigin, projectionRef.current, width, height);
             const destCoords = getCountryCentroid(flightDestination, projectionRef.current, width, height);
@@ -534,19 +535,21 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
             }
             
             return (
-              <FlightPath
-                origin={originCoords}
-                destination={destCoords}
-                isPlaying={isFlightPlaying}
-                durationMs={flightDurationMs}
-                onComplete={onFlightComplete}
-                onProgress={progressHandler}
-                onStop={onFlightStop}
-                width={width}
-                height={height}
-                isDarkMode={isDarkMode}
-                themeId={flightTheme}
-              />
+              <Suspense fallback={null}>
+                <FlightPath
+                  origin={originCoords}
+                  destination={destCoords}
+                  isPlaying={isFlightPlaying}
+                  durationMs={flightDurationMs}
+                  onComplete={onFlightComplete}
+                  onProgress={progressHandler}
+                  onStop={onFlightStop}
+                  width={width}
+                  height={height}
+                  isDarkMode={isDarkMode}
+                  themeId={flightTheme}
+                />
+              </Suspense>
             );
           })()}
 

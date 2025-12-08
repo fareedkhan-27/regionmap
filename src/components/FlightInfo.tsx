@@ -15,7 +15,7 @@ interface FlightInfoProps {
   className?: string;
 }
 
-export default function FlightInfo({
+const FlightInfo = React.memo(function FlightInfo({
   origin,
   destination,
   className = "",
@@ -44,27 +44,31 @@ export default function FlightInfo({
 
   return (
     <div
-      className={`p-2 bg-cream-100 dark:bg-ink-800 rounded-lg border border-cream-300 dark:border-ink-700 ${className}`}
+      className={`p-3 bg-cream-100 dark:bg-ink-800 rounded-lg border border-cream-300 dark:border-ink-700 shadow-sm ${className}`}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+          <span className="text-[10px] font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider">
             Distance
           </span>
-          <span className="text-xs font-semibold text-ink-800 dark:text-ink-200">
+          <span className="text-sm font-bold text-ink-800 dark:text-ink-200">
             {formatDistance(distance)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-ink-600 dark:text-ink-400 uppercase tracking-wide">
+          <span className="text-[10px] font-semibold text-ink-600 dark:text-ink-400 uppercase tracking-wider">
             Est. Flight Time
           </span>
-          <span className="text-xs font-semibold text-ink-800 dark:text-ink-200">
+          <span className="text-sm font-bold text-ink-800 dark:text-ink-200">
             {formatFlightTime(flightTime!)}
           </span>
         </div>
       </div>
     </div>
   );
-}
+});
+
+FlightInfo.displayName = "FlightInfo";
+
+export default FlightInfo;
 

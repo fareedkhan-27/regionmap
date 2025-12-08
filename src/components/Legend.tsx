@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import type { Group, Mode } from "@/types/map";
 
 interface LegendProps {
@@ -10,14 +10,17 @@ interface LegendProps {
   isDarkMode?: boolean;
 }
 
-export default function Legend({
+const Legend = React.memo(function Legend({
   groups,
   mode,
   className = "",
   isDarkMode = false,
 }: LegendProps) {
-  // Filter to only groups with countries
-  const activeGroups = groups.filter((g) => g.countries.length > 0);
+  // Filter to only groups with countries (memoized)
+  const activeGroups = useMemo(
+    () => groups.filter((g) => g.countries.length > 0),
+    [groups]
+  );
 
   if (activeGroups.length === 0) {
     return null;
@@ -26,34 +29,34 @@ export default function Legend({
   return (
     <div
       className={`
-        rounded-lg p-3 shadow-soft
-        ${isDarkMode ? "bg-ink-800/90 text-ink-100" : "bg-white/95 text-ink-800"}
+        rounded-lg p-3.5 sm:p-4 shadow-soft border border-cream-200 dark:border-ink-700
+        ${isDarkMode ? "bg-ink-800/95 text-ink-100" : "bg-white/95 text-ink-800"}
         backdrop-blur-sm
         ${className}
       `}
     >
       <h4
         className={`
-          text-xs font-semibold uppercase tracking-wider mb-2
+          text-xs font-semibold uppercase tracking-wider mb-3
           ${isDarkMode ? "text-ink-400" : "text-ink-500"}
         `}
       >
         Legend
       </h4>
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {activeGroups.map((group) => (
-          <li key={group.id} className="flex items-center gap-2">
+          <li key={group.id} className="flex items-center gap-2.5">
             <span
-              className="w-4 h-4 rounded-sm flex-shrink-0 shadow-sm"
+              className="w-4 h-4 rounded-md flex-shrink-0 shadow-sm border border-cream-300 dark:border-ink-600"
               style={{ backgroundColor: group.color }}
             />
-            <span className="text-sm font-medium truncate">
+            <span className="text-sm font-medium truncate flex-1">
               {mode === "single" ? "Selected Countries" : group.name}
             </span>
             <span
               className={`
-                text-xs ml-auto
-                ${isDarkMode ? "text-ink-500" : "text-ink-400"}
+                text-xs font-semibold ml-auto px-1.5 py-0.5 rounded
+                ${isDarkMode ? "text-ink-300 bg-ink-700" : "text-ink-600 bg-cream-100"}
               `}
             >
               {group.countries.length}
@@ -63,4 +66,8 @@ export default function Legend({
       </ul>
     </div>
   );
-}
+});
+
+Legend.displayName = "Legend";
+
+export default Legend;
