@@ -599,8 +599,8 @@ export default function MapApp() {
     setGroupCountries(targetGroupId, inverse);
   }, [allSelectedCountries, activeGroupId, setGroupCountries]);
 
-  // Mobile bottom sheet content (memoized)
-  const renderMobileContent = useCallback(() => {
+  // Mobile bottom sheet content
+  const renderMobileContent = () => {
     switch (mobileTab) {
       case "select":
         return (
@@ -1168,55 +1168,7 @@ export default function MapApp() {
           </div>
         );
     }
-  }, [
-    config,
-    activeGroupId,
-    setMode,
-    handlePresetSelect,
-    handleClearActiveGroup,
-    handleClearAll,
-    allSelectedCountries,
-    handleAddNeighbors,
-    handleSelectContinent,
-    handleInverseSelection,
-    countryInput,
-    countryInputTouched,
-    setCountryInput,
-    setCountryInputTouched,
-    validationErrors,
-    groupInputs,
-    handleGroupInputChange,
-    applyGroupInput,
-    applyAllGroupInputs,
-    handleAddGroup,
-    handleRemoveGroup,
-    updateGroup,
-    setActiveGroup,
-    enableFlightAnimation,
-    setEnableFlightAnimation,
-    flightOrigin,
-    flightDestination,
-    handleFlightOriginChange,
-    handleFlightDestinationChange,
-    flightTheme,
-    setFlightTheme,
-    flightDurationMs,
-    setFlightDurationMs,
-    isFlightPlaying,
-    handlePlayFlight,
-    handleStopFlight,
-    handleSurpriseMe,
-    setBackground,
-    setBorderColor,
-    setTitleConfig,
-    setResolution,
-    showCountryLabels,
-    setShowCountryLabels,
-    handleExport,
-    isExporting,
-    exportSuccess,
-    mobileTab,
-  ]);
+  };
 
   return (
     <div className={`h-screen max-h-screen flex flex-col overflow-hidden ${isDarkMode ? "dark" : ""} ${isDarkMode ? "bg-gradient-dark" : "bg-gradient-to-br from-slate-50 to-blue-50"}`}>
