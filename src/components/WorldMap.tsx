@@ -21,7 +21,7 @@ import {
   getISO2FromFeatureId,
   createGraticule,
 } from "@/utils/worldMap";
-import { getCountryCentroid } from "@/utils/countryCentroids";
+import { getCountryCentroid, COUNTRY_CENTROIDS } from "@/utils/countryCentroids";
 import { getCachedGeoData } from "@/utils/geoDataCache";
 import type { CountryCode, MapConfig } from "@/types/map";
 
@@ -88,7 +88,16 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
     const [error, setError] = useState<string | null>(null);
     const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-    const projectionRef = useRef(createProjection(width, height));
+    
+    // IMPORTANT: Map and routes share this exact projection instance; if you change projection or dimensions, keep both in sync.
+    // Create projection as memoized value that updates when width/height changes
+    const projection = useMemo(() => createProjection(width, height), [width, height]);
+    const projectionRef = useRef(projection);
+    
+    // Keep ref in sync with memoized projection
+    useEffect(() => {
+      projectionRef.current = projection;
+    }, [projection]);
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
@@ -181,7 +190,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         bbox,
         width,
         height,
-        projectionRef.current,
+        projection,
         60
       );
 
@@ -193,7 +202,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           zoomRef.current.transform,
           d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
         );
-    }, [geoData, selectedCountries, width, height]);
+    }, [geoData, selectedCountries, width, height, projection]);
 
     // Reset zoom
     const resetMapZoom = useCallback(() => {
@@ -218,7 +227,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
 
     // Handle flight progress for cinematic zoom
     const handleFlightProgress = useCallback((progress: number, planePosition: { x: number; y: number }) => {
-      if (!svgRef.current || !zoomRef.current || !projectionRef.current || !isFlightPlaying) return;
+      if (!svgRef.current || !zoomRef.current || !projection || !isFlightPlaying) return;
 
       const svg = d3.select(svgRef.current);
       let scale: number;
@@ -230,7 +239,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         scale = 1.0 + (0.3 * takeoffProgress);
         
         if (flightOrigin) {
-          const originCoords = getCountryCentroid(flightOrigin, projectionRef.current, width, height);
+          const originCoords = getCountryCentroid(flightOrigin, projection, width, height);
           if (originCoords) {
             translate = [
               width / 2 - originCoords.x * scale,
@@ -260,7 +269,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         scale = 0.7 + (0.5 * landingProgress);
         
         if (flightDestination) {
-          const destCoords = getCountryCentroid(flightDestination, projectionRef.current, width, height);
+          const destCoords = getCountryCentroid(flightDestination, projection, width, height);
           if (destCoords) {
             translate = [
               width / 2 - destCoords.x * scale,
@@ -281,7 +290,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
       if (zoomRef.current) {
         svg.call(zoomRef.current.transform, transform);
       }
-    }, [width, height, flightOrigin, flightDestination, isFlightPlaying]);
+    }, [width, height, flightOrigin, flightDestination, isFlightPlaying, projection]);
 
     // Use provided progress handler or fallback to internal handler
     const progressHandler = useMemo(() => {
@@ -297,7 +306,8 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
     }), [isDarkMode, config.background, config.borderColor]);
 
     // Memoize path generator and graticule
-    const pathGenerator = useMemo(() => createPathGenerator(projectionRef.current), []);
+    // IMPORTANT: Map and routes share this exact projection instance; if you change projection or dimensions, keep both in sync.
+    const pathGenerator = useMemo(() => createPathGenerator(projection), [projection]);
     const graticule = useMemo(() => createGraticule(), []);
 
     // Memoize patterns for each group
@@ -513,14 +523,27 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
 
           {/* Flight Path Animation - Lazy loaded */}
           {flightOrigin && flightDestination && (() => {
-            const originCoords = getCountryCentroid(flightOrigin, projectionRef.current, width, height);
-            const destCoords = getCountryCentroid(flightDestination, projectionRef.current, width, height);
+            // Get lat/lon coordinates for great circle path
+            const originCentroid = COUNTRY_CENTROIDS[flightOrigin.toUpperCase()];
+            const destCentroid = COUNTRY_CENTROIDS[flightDestination.toUpperCase()];
             
-            // Defensive check: if centroids are missing, stop the flight
-            if (!originCoords || !destCoords) {
+            if (!originCentroid || !destCentroid) {
               // If flight is playing but centroids are invalid, stop it
               if (isFlightPlaying && onFlightStop) {
-                // Use setTimeout to avoid state updates during render
+                setTimeout(() => {
+                  onFlightStop();
+                }, 0);
+              }
+              return null;
+            }
+            
+            // Use the same projection instance as map paths for perfect alignment
+            const originCoords = getCountryCentroid(flightOrigin, projection, width, height);
+            const destCoords = getCountryCentroid(flightDestination, projection, width, height);
+            
+            // Defensive check: if projected coordinates are missing, stop the flight
+            if (!originCoords || !destCoords) {
+              if (isFlightPlaying && onFlightStop) {
                 setTimeout(() => {
                   onFlightStop();
                 }, 0);
@@ -533,6 +556,9 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
                 <FlightPath
                   origin={originCoords}
                   destination={destCoords}
+                  originLonLat={originCentroid}
+                  destinationLonLat={destCentroid}
+                  projection={projection}
                   isPlaying={isFlightPlaying}
                   durationMs={flightDurationMs}
                   onComplete={onFlightComplete}

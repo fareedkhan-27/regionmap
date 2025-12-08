@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import * as d3 from "d3";
+import type { GeoProjection } from "d3-geo";
 import type { FlightTheme } from "@/data/flightThemes";
 import { getFlightThemeForDarkMode } from "@/data/flightThemes";
 
 interface FlightPathProps {
   origin: { x: number; y: number } | null;
   destination: { x: number; y: number } | null;
+  originLonLat?: [number, number]; // [longitude, latitude] for great circle
+  destinationLonLat?: [number, number]; // [longitude, latitude] for great circle
+  projection?: GeoProjection; // Same projection as map for alignment
   isPlaying: boolean;
   durationMs: number;
   onComplete?: () => void;
@@ -22,6 +27,9 @@ interface FlightPathProps {
 export default function FlightPath({
   origin,
   destination,
+  originLonLat,
+  destinationLonLat,
+  projection,
   isPlaying,
   durationMs,
   onComplete,
@@ -45,21 +53,45 @@ export default function FlightPath({
     return null;
   }
 
-  // Calculate control point for quadratic Bézier curve
-  // Control point is offset upward to create an arc
-  const midX = (origin.x + destination.x) / 2;
-  const midY = (origin.y + destination.y) / 2;
-  const distance = Math.sqrt(
-    Math.pow(destination.x - origin.x, 2) + Math.pow(destination.y - origin.y, 2)
-  );
-  
-  // Control point offset: 30-40% of distance above midpoint
-  const controlOffset = distance * 0.35;
-  const controlX = midX;
-  const controlY = midY - controlOffset;
-
-  // Create path string for quadratic Bézier curve
-  const pathString = `M ${origin.x} ${origin.y} Q ${controlX} ${controlY} ${destination.x} ${destination.y}`;
+  // Create great circle path if we have lat/lon coordinates and projection
+  // Otherwise fall back to Bézier curve for visual appeal
+  const pathString = useMemo(() => {
+    if (originLonLat && destinationLonLat && projection) {
+      // Create a great circle (geodesic) path between two points
+      const greatCircle = d3.geoPath().projection(projection);
+      
+      // Create a LineString geometry for the great circle
+      const lineString = {
+        type: "LineString" as const,
+        coordinates: [originLonLat, destinationLonLat] as [number, number][],
+      };
+      
+      // Generate the path using D3's great circle interpolation
+      const path = greatCircle(lineString);
+      
+      // If path generation fails, fall back to Bézier
+      if (!path) {
+        const midX = (origin.x + destination.x) / 2;
+        const midY = (origin.y + destination.y) / 2;
+        const distance = Math.sqrt(
+          Math.pow(destination.x - origin.x, 2) + Math.pow(destination.y - origin.y, 2)
+        );
+        const controlOffset = distance * 0.35;
+        return `M ${origin.x} ${origin.y} Q ${midX} ${midY - controlOffset} ${destination.x} ${destination.y}`;
+      }
+      
+      return path;
+    } else {
+      // Fallback to Bézier curve for visual appeal
+      const midX = (origin.x + destination.x) / 2;
+      const midY = (origin.y + destination.y) / 2;
+      const distance = Math.sqrt(
+        Math.pow(destination.x - origin.x, 2) + Math.pow(destination.y - origin.y, 2)
+      );
+      const controlOffset = distance * 0.35;
+      return `M ${origin.x} ${origin.y} Q ${midX} ${midY - controlOffset} ${destination.x} ${destination.y}`;
+    }
+  }, [origin, destination, originLonLat, destinationLonLat, projection]);
 
   // Animation loop with defensive checks
   useEffect(() => {
