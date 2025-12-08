@@ -12,8 +12,6 @@ import React, {
   Suspense,
 } from "react";
 import * as d3 from "d3";
-import * as topojson from "topojson-client";
-import type { Topology, GeometryCollection } from "topojson-specification";
 import type { FeatureCollection, Feature, Geometry } from "geojson";
 import {
   createProjection,
@@ -105,15 +103,8 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
         setIsLoading(true);
         setError(null);
         try {
-          // Use cached geo data
-          const topology = await getCachedGeoData();
-          
-          // Convert TopoJSON to GeoJSON
-          const countries = topojson.feature(
-            topology,
-            topology.objects.countries
-          ) as FeatureCollection;
-          
+          // Use cached geo data (already converted to FeatureCollection)
+          const countries = await getCachedGeoData();
           setGeoData(countries);
         } catch (err) {
           console.error("Error loading world data:", err);

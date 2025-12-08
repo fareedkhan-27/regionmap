@@ -1,8 +1,16 @@
 // Cache for geoJSON data to avoid re-fetching on every component mount
-let cachedGeoData: any = null;
-let loadingPromise: Promise<any> | null = null;
+import * as topojson from "topojson-client";
+import type { Topology, GeometryCollection } from "topojson-specification";
+import type { FeatureCollection } from "geojson";
 
-export async function getCachedGeoData(): Promise<any> {
+interface CountryProperties {
+  name: string;
+}
+
+let cachedGeoData: FeatureCollection | null = null;
+let loadingPromise: Promise<FeatureCollection> | null = null;
+
+export async function getCachedGeoData(): Promise<FeatureCollection> {
   // Return cached data if available
   if (cachedGeoData) {
     return cachedGeoData;
@@ -22,9 +30,19 @@ export async function getCachedGeoData(): Promise<any> {
       if (!response.ok) {
         throw new Error("Failed to load world map data");
       }
-      const topology = await response.json();
-      cachedGeoData = topology;
-      return topology;
+      const topology = (await response.json()) as Topology<{
+        countries: GeometryCollection<CountryProperties>;
+      }>;
+
+      // Convert TopoJSON to GeoJSON
+      const countries = topojson.feature(
+        topology,
+        topology.objects.countries
+      ) as FeatureCollection;
+
+      cachedGeoData = countries;
+      loadingPromise = null; // Clear the promise once resolved
+      return countries;
     } catch (error) {
       loadingPromise = null; // Reset on error so we can retry
       throw error;
