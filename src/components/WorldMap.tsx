@@ -436,6 +436,11 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           {/* Countries */}
           {geoData.features.map((feature: Feature<Geometry>) => {
             const iso2 = getISO2FromFeatureId(feature.id as string | number);
+            // Defensive logging for unmapped country IDs (development/debugging only)
+            if (!iso2 && feature.id !== undefined && feature.id !== null && process.env.NODE_ENV === 'development') {
+              const countryName = (feature.properties as CountryProperties)?.name || 'Unknown';
+              console.warn(`[WorldMap] Unmapped country ID in TopoJSON: ${feature.id} (${countryName})`);
+            }
             const isSelected = iso2 ? selectedCountries.includes(iso2) : false;
             const fillColor = iso2 ? countryColorMap[iso2] : null;
 

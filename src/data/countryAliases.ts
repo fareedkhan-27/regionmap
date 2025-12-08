@@ -82,6 +82,7 @@ export const COUNTRY_ALIASES: CountryAlias[] = [
   { iso2: "FJ", iso3: "FJI", name: "Fiji", aliases: ["fiji", "fj", "fji"] },
   { iso2: "FI", iso3: "FIN", name: "Finland", aliases: ["finland", "fi", "fin", "suomi"] },
   { iso2: "FR", iso3: "FRA", name: "France", aliases: ["france", "fr", "fra"] },
+  { iso2: "TF", iso3: "ATF", name: "French Southern and Antarctic Lands", aliases: ["french southern and antarctic lands", "french southern territories", "tf", "atf", "terres australes et antarctiques françaises", "taaf"] },
   
   // G
   { iso2: "GA", iso3: "GAB", name: "Gabon", aliases: ["gabon", "ga", "gab"] },
