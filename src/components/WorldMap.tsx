@@ -309,6 +309,53 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
     const pathGenerator = useMemo(() => createPathGenerator(projectionRef.current), []);
     const graticule = useMemo(() => createGraticule(), []);
 
+    // Memoize patterns for each group
+    const memoizedPatterns = useMemo(() => 
+      config.groups.map((group) => {
+        const patternId = `pattern-${group.id}`;
+        const pattern = group.pattern || "solid";
+
+        if (pattern === "solid") return null;
+
+        return (
+          <pattern
+            key={patternId}
+            id={patternId}
+            patternUnits="userSpaceOnUse"
+            width="8"
+            height="8"
+            patternTransform="rotate(0)"
+          >
+            <rect width="8" height="8" fill={group.color} opacity="0.3" />
+            {pattern === "stripes" && (
+              <>
+                <line x1="0" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="3" />
+                <line x1="4" y1="0" x2="4" y2="8" stroke={group.color} strokeWidth="3" />
+              </>
+            )}
+            {pattern === "dots" && (
+              <>
+                <circle cx="2" cy="2" r="1.5" fill={group.color} />
+                <circle cx="6" cy="6" r="1.5" fill={group.color} />
+              </>
+            )}
+            {pattern === "crosshatch" && (
+              <>
+                <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="1.5" />
+                <line x1="8" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="1.5" />
+              </>
+            )}
+            {pattern === "diagonal" && (
+              <>
+                <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="2" />
+              </>
+            )}
+          </pattern>
+        );
+      }),
+      [config.groups]
+    );
+
     if (isLoading) {
       return (
         <div
@@ -372,51 +419,7 @@ const WorldMap = forwardRef<WorldMapHandle, WorldMapProps>(
           </pattern>
 
           {/* Patterns for each group (memoized) */}
-          {useMemo(() => 
-            config.groups.map((group) => {
-              const patternId = `pattern-${group.id}`;
-              const pattern = group.pattern || "solid";
-
-              if (pattern === "solid") return null;
-
-              return (
-                <pattern
-                  key={patternId}
-                  id={patternId}
-                  patternUnits="userSpaceOnUse"
-                  width="8"
-                  height="8"
-                  patternTransform="rotate(0)"
-                >
-                  <rect width="8" height="8" fill={group.color} opacity="0.3" />
-                  {pattern === "stripes" && (
-                    <>
-                      <line x1="0" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="3" />
-                      <line x1="4" y1="0" x2="4" y2="8" stroke={group.color} strokeWidth="3" />
-                    </>
-                  )}
-                  {pattern === "dots" && (
-                    <>
-                      <circle cx="2" cy="2" r="1.5" fill={group.color} />
-                      <circle cx="6" cy="6" r="1.5" fill={group.color} />
-                    </>
-                  )}
-                  {pattern === "crosshatch" && (
-                    <>
-                      <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="1.5" />
-                      <line x1="8" y1="0" x2="0" y2="8" stroke={group.color} strokeWidth="1.5" />
-                    </>
-                  )}
-                  {pattern === "diagonal" && (
-                    <>
-                      <line x1="0" y1="0" x2="8" y2="8" stroke={group.color} strokeWidth="2" />
-                    </>
-                  )}
-                </pattern>
-              );
-            }),
-            [config.groups]
-          )}
+          {memoizedPatterns}
         </defs>
 
         <g ref={gRef}>
